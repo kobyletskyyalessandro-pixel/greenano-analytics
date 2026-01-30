@@ -18,75 +18,79 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
-    /* FORZA TEMA CHIARO GLOBALE */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc;
-        color: #0f172a;
+    /* 1. FORZA SFONDO BIANCO SU TUTTA L'APP (Sovrascrive Dark Mode) */
+    .stApp {
+        background-color: #f8fafc !important;
+        color: #0f172a !important;
     }
     
-    html, body, .stApp { 
-        font-family: 'Inter', sans-serif; 
-        background-color: var(--bg); 
-        color: var(--text); 
-    }
-    
-    /* --- SIDEBAR: SFONDO BIANCO --- */
+    /* 2. SIDEBAR BIANCA */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Testi generici sidebar */
-    section[data-testid="stSidebar"] p, 
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] div {
-        color: #334155 !important;
+    /* 3. TESTI SIDEBAR (Forza colore scuro anche in dark mode) */
+    section[data-testid="stSidebar"] .stMarkdown, 
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span {
+        color: #0f172a !important; /* BLU NOTTE SCURO */
     }
-    
-    /* Labels sopra gli input (es. "P1: Temperature") -> BLU */
-    div[data-testid="stSidebar"] label {
-        color: #1e3a8a !important;
-        font-weight: 700 !important;
-    }
-    
-    /* --- INPUT BOXES (LA PARTE CRITICA) --- */
-    
-    /* 1. IL CONTENITORE (BOX) -> BIANCO */
-    div[data-baseweb="input"] {
-        background-color: #ffffff !important; /* BIANCO */
-        border: 1px solid #cbd5e1 !important; /* Bordo Grigio */
-        border-radius: 8px !important;
-    }
-    
-    /* 2. IL TESTO (NUMERO) -> GRIGIO */
-    input[type="number"] {
-        color: #334155 !important; /* GRIGIO SCURO */
-        -webkit-text-fill-color: #334155 !important; /* Fix per Safari/Chrome */
-        caret-color: #334155 !important; /* Cursore Grigio */
-        font-weight: 600 !important;
-        background-color: transparent !important;
-    }
-    
-    /* 3. I BOTTONI +/- -> GRIGI */
-    div[data-baseweb="input"] button {
-        background-color: transparent !important;
+    section[data-testid="stSidebar"] small {
         color: #64748b !important;
     }
+
+    /* ============================================================ */
+    /* 4. FIX "SCATOLE NERE" -> FORZA BIANCO ASSOLUTO */
+    /* ============================================================ */
     
-    /* --- TITOLI --- */
+    /* Il contenitore esterno dell'input */
+    div[data-baseweb="input"] {
+        background-color: #ffffff !important; /* BIANCO */
+        border: 1px solid #94a3b8 !important; /* BORDO GRIGIO */
+        border-radius: 8px !important;
+    }
+
+    /* Il campo dove scrivi i numeri */
+    input[type="number"] {
+        background-color: #ffffff !important; /* BIANCO */
+        color: #0f172a !important; /* NUMERO SCURO */
+        -webkit-text-fill-color: #0f172a !important; /* Fix per Safari/Chrome */
+        caret-color: #0f172a !important; /* Cursore scuro */
+    }
+
+    /* I bottoni +/- a destra */
+    div[data-baseweb="input"] button {
+        background-color: transparent !important;
+        color: #0f172a !important; /* Simboli scuri */
+    }
+    
+    /* Selettore specifico per Streamlit Dark Theme override */
+    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+        background-color: white !important;
+        color: black !important;
+    }
+    /* ============================================================ */
+
+    /* TITOLI */
     h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 700; }
     
-    /* --- CARD --- */
+    /* CARD */
     div[data-testid="stVerticalBlock"] > div { 
-        background-color: white; 
+        background-color: white !important; 
+        color: #0f172a !important;
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     
-    /* --- BOTTONI --- */
+    /* BOTTONI */
     div.stButton > button:first-child { 
-        background-color: var(--primary); 
+        background-color: var(--primary) !important; 
         color: white !important; 
         border-radius: 8px; 
         border: none; 
@@ -94,7 +98,7 @@ st.markdown("""
         font-weight: 600; 
     }
     div.stButton > button:hover { 
-        background-color: var(--secondary); 
+        background-color: var(--secondary) !important; 
         transform: translateY(-2px); 
     }
     
