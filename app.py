@@ -97,90 +97,54 @@ def blue_header(text):
     </div>
     """, unsafe_allow_html=True)
 
-# --- MOTORE DI CALCOLO (TIER + MANUAL THRESHOLDS) ---
+# --- MOTORE DI CALCOLO (TIER SYSTEM DINAMICO) ---
 
-SF_SCORE_MAP = {
-    2: [1.0, 0.5],
-    3: [1.0, 0.6, 0.3],
-    4: [1.0, 0.75, 0.5, 0.25],
-    5: [1.0, 0.8, 0.6, 0.4, 0.2]
-}
+def generate_linear_scores(n_tiers):
+    """
+    Genera punteggi lineari basati su 1/N.
+    Es. N=4 -> [1.0, 0.75, 0.5, 0.25]
+    """
+    step = 1.0 / n_tiers
+    # Genera lista decrescente: 1.0, 1-step, 1-2step...
+    scores = [round(1.0 - (i * step), 2) for i in range(n_tiers)]
+    return scores
 
 def assign_manual_tiered_scores(df, col_name, sf_value, manual_thresholds):
     """
-    Assegna score basati su soglie manuali definite dall'utente.
-    manual_thresholds: Lista di valori (es. [400, 300] per 3 tiers).
-                       Val >= 400 -> Score 1
-                       Val >= 300 -> Score 2
-                       Else -> Score 3
+    Assegna score basati su soglie manuali e calcolo dinamico dei coefficienti.
     """
-    scores_list = SF_SCORE_MAP.get(sf_value, SF_SCORE_MAP[3])
+    # 1. Genera i punteggi dinamicamente (es. 1.0, 0.75, 0.5, 0.25)
+    scores_list = generate_linear_scores(sf_value)
     
-    # Inizializza con lo score più basso
+    # Inizializza con lo score più basso (l'ultimo della lista)
     assigned_scores = pd.Series(scores_list[-1], index=df.index, dtype=float)
     
-    # Assegna gli score partendo dal livello più alto
-    # manual_thresholds ha N-1 valori. 
-    # Esempio 3 Tiers -> 2 Soglie (T1, T2).
-    # Se Val >= T1 -> Score[0]
-    # Se T2 <= Val < T1 -> Score[1]
+    # 2. Applica le soglie (Logica: Chi supera la soglia X prende lo score X)
+    # manual_thresholds sono ordinati dal Tier 1 (più alto) a scendere nell'UI.
+    # Esempio UI: Tier 1 Limit (>400), Tier 2 Limit (>300).
+    # Scores: [1.0, 0.75, 0.50].
     
-    # Iteriamo sui livelli alti
-    for i, threshold in enumerate(manual_thresholds):
-        mask = df[col_name] >= threshold
-        # Assegna lo score solo se non è stato già assegnato uno score più alto (logica a cascata implicita dall'ordine)
-        # Ma qui usiamo un approccio diretto:
-        # Per il primo threshold (Top Tier), assegniamo a tutti quelli sopra.
-        # Per i successivi, assegniamo solo a quelli sopra CHE NON SONO già stati assegnati (opzionale se ordiniamo bene)
+    # Per applicarli correttamente sovrascrivendo dal basso verso l'alto:
+    # Ordiniamo le soglie in ordine crescente (300, 400).
+    # Chi supera 300 prende 0.75. Chi supera 400 prende 1.0 (sovrascrivendo 0.75).
+    
+    sorted_thresh_indices = np.argsort(manual_thresholds) # Indici che ordinano le soglie
+    sorted_thresholds = np.array(manual_thresholds)[sorted_thresh_indices]
+    
+    # Dobbiamo mappare la soglia allo score corretto.
+    # threshold[0] (input UI) corrisponde a scores_list[0] (1.0).
+    # threshold[1] (input UI) corrisponde a scores_list[1] (0.75).
+    
+    for original_idx in sorted_thresh_indices:
+        thresh_val = manual_thresholds[original_idx]
+        target_score = scores_list[original_idx]
         
-        # Semplice: Assegna lo score a tutti quelli >= threshold. 
-        # Poiché iteriamo dal Tier 1 (più alto) a scendere, dobbiamo fare attenzione a non sovrascrivere?
-        # No, se iteriamo dal basso verso l'alto (soglie più basse) sovrascriviamo con score migliori.
-        pass
-
-    # REFINE LOGIC:
-    # 1. Setta tutto al minimo (Score N)
-    # 2. Per ogni soglia (dalla più bassa alla più alta), assegna lo score corrispondente a chi la supera.
-    
-    # Ordiniamo soglie e score per sicurezza (Soglia Bassa -> Score Basso? No.)
-    # Soglia Alta -> Score Alto (1.0)
-    
-    # Esempio: Tiers=3 (Score: 1.0, 0.6, 0.3). Soglie Input: [400, 300] (T1=400, T2=300).
-    # Chi è >= 300 prende 0.6.
-    # Chi è >= 400 prende 1.0 (sovrascrive 0.6).
-    
-    # Ordiniamo le soglie e gli score accoppiati
-    # Ci servono sf_value-1 soglie.
-    # Scores corrispondenti: scores_list[0] (per >= T1), scores_list[1] (per >= T2), etc.
-    
-    # Applichiamo dal basso (soglia più bassa) all'alto
-    # Reverse order di applicazione
-    
-    thresholds_sorted = sorted(manual_thresholds) # Es. [300, 400]
-    # Gli score corrispondenti sono:
-    # Se supero 300 (soglia bassa) -> Prendo Score[1] (0.6)
-    # Se supero 400 (soglia alta) -> Prendo Score[0] (1.0)
-    
-    # Quindi mappiamo thresholds_sorted[k] -> scores_list[sf_value - 2 - k]
-    # Es. 3 Tiers -> 2 soglie. Sorted: [LowT, HighT].
-    # LowT -> Score Medio (0.6) -> Index 1
-    # HighT -> Score Alto (1.0) -> Index 0
-    
-    num_thresholds = len(thresholds_sorted)
-    
-    for i in range(num_thresholds):
-        thresh = thresholds_sorted[i]
-        # Score index corresponding: (N_tiers - 2) - i
-        # Es. N=3. i=0 (LowT) -> Index 1 (0.6). i=1 (HighT) -> Index 0 (1.0).
-        score_idx = (sf_value - 2) - i
-        if score_idx >= 0:
-            target_score = scores_list[score_idx]
-            assigned_scores[df[col_name] >= thresh] = target_score
+        # Sovrascrive se il valore supera la soglia
+        assigned_scores[df[col_name] >= thresh_val] = target_score
             
     return assigned_scores
 
 def calculate_ops_manual(df, thresholds_map, tiers_config, weights):
-    # thresholds_map: {'P1': [t1, t2...], 'P2': [...]}
     ps1 = assign_manual_tiered_scores(df, 'P1', tiers_config['P1'], thresholds_map['P1'])
     ps2 = assign_manual_tiered_scores(df, 'P2', tiers_config['P2'], thresholds_map['P2'])
     ps3 = assign_manual_tiered_scores(df, 'P3', tiers_config['P3'], thresholds_map['P3'])
@@ -237,54 +201,50 @@ df = load_data()
 if df is not None:
     st.sidebar.markdown('<div class="sidebar-title">Settings</div>', unsafe_allow_html=True)
     
-    # Dizionario per salvare le soglie manuali
     manual_thresholds = {'P1': [], 'P2': [], 'P3': []}
     
     # 1. TIERS & THRESHOLDS CONFIG
     with st.sidebar:
         blue_header("1. Performance Configuration")
         
-        # --- P1 TEMP ---
+        # --- P1 TEMP (Default 350) ---
         st.markdown("**P1: Temperature (K)**")
-        sf_t = st.selectbox("Tiers (P1)", [2, 3, 4, 5], index=2, key='sf_t')
+        sf_t = st.selectbox("Tiers (P1)", [2, 3, 4, 5], index=2, key='sf_t') # Default 4 Tiers
         
-        # Genera input dinamici per le soglie
-        # Usiamo i quantili come valori di default suggeriti
-        p1_vals = df['P1'].sort_values(ascending=False).values
-        n_p1 = len(p1_vals)
+        # Genera i punteggi per la label
+        scores_t = generate_linear_scores(sf_t)
+        
+        # Loop per input soglie
         for i in range(sf_t - 1):
-            # Calcola suggestion
-            idx = int(n_p1 * (i + 1) / sf_t)
-            default_val = float(p1_vals[idx]) if idx < n_p1 else 0.0
+            # Default intelligente: per il primo tier metti 350 come richiesto, per gli altri scala
+            default_val = 350.0 if i == 0 else max(0.0, 350.0 - (i * 50.0))
             
-            label_text = f"Tier {i+1} Limit (Score {SF_SCORE_MAP[sf_t][i]})"
+            label_text = f"Tier {i+1} Limit (Score {scores_t[i]})"
             val = st.number_input(label_text, value=default_val, key=f"t_p1_{i}")
             manual_thresholds['P1'].append(val)
             
         st.markdown("---")
 
-        # --- P2 MAG ---
+        # --- P2 MAG (Default 0.4) ---
         st.markdown("**P2: Magnetization (T)**")
-        sf_m = st.selectbox("Tiers (P2)", [2, 3, 4, 5], index=1, key='sf_m')
-        p2_vals = df['P2'].sort_values(ascending=False).values
-        n_p2 = len(p2_vals)
+        sf_m = st.selectbox("Tiers (P2)", [2, 3, 4, 5], index=1, key='sf_m') # Default 3 Tiers
+        scores_m = generate_linear_scores(sf_m)
+        
         for i in range(sf_m - 1):
-            idx = int(n_p2 * (i + 1) / sf_m)
-            default_val = float(p2_vals[idx]) if idx < n_p2 else 0.0
-            val = st.number_input(f"Tier {i+1} Limit (Score {SF_SCORE_MAP[sf_m][i]})", value=default_val, key=f"t_p2_{i}")
+            default_val = 0.4 if i == 0 else max(0.0, 0.4 - (i * 0.1))
+            val = st.number_input(f"Tier {i+1} Limit (Score {scores_m[i]})", value=default_val, key=f"t_p2_{i}")
             manual_thresholds['P2'].append(val)
 
         st.markdown("---")
 
-        # --- P3 COERC ---
+        # --- P3 COERC (Default 0.4) ---
         st.markdown("**P3: Coercivity (T)**")
-        sf_c = st.selectbox("Tiers (P3)", [2, 3, 4, 5], index=3, key='sf_c')
-        p3_vals = df['P3'].sort_values(ascending=False).values
-        n_p3 = len(p3_vals)
+        sf_c = st.selectbox("Tiers (P3)", [2, 3, 4, 5], index=3, key='sf_c') # Default 5 Tiers
+        scores_c = generate_linear_scores(sf_c)
+        
         for i in range(sf_c - 1):
-            idx = int(n_p3 * (i + 1) / sf_c)
-            default_val = float(p3_vals[idx]) if idx < n_p3 else 0.0
-            val = st.number_input(f"Tier {i+1} Limit (Score {SF_SCORE_MAP[sf_c][i]})", value=default_val, key=f"t_p3_{i}")
+            default_val = 0.4 if i == 0 else max(0.0, 0.4 - (i * 0.1))
+            val = st.number_input(f"Tier {i+1} Limit (Score {scores_c[i]})", value=default_val, key=f"t_p3_{i}")
             manual_thresholds['P3'].append(val)
         
         st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
@@ -312,7 +272,7 @@ if df is not None:
         tiers_config = {'P1': sf_t, 'P2': sf_m, 'P3': sf_c}
         weights_perf = [w_p1, w_p2, w_p3]
         
-        # CALCOLO OPS CON SOGLIE MANUALI
+        # CALCOLO OPS CON SOGLIE MANUALI & COEFFICIENTI DINAMICI
         df['OPS'] = calculate_ops_manual(df, manual_thresholds, tiers_config, weights_perf)
         
         s_cols = [f"S{i}" for i in range(1, 11)]
@@ -362,21 +322,13 @@ if df is not None:
                     rng = np.random.default_rng()
                     W_ops = rng.dirichlet(np.array(weights_perf)*50+1, 1000)
                     
-                    # Recupera score correnti
-                    # Per simulazione Monte Carlo, semplifichiamo usando l'OPS corrente come base
-                    # Idealmente dovremmo ricalcolare gli score P1, P2, P3 basati sulle soglie manuali per ogni iterazione
-                    # Ma le soglie sono fisse, cambiano solo i pesi (W_ops)
-                    
-                    # 1. Calcola vettori P1, P2, P3 score per l'elemento selezionato
+                    # Recupera score
                     p1_score = assign_manual_tiered_scores(df.iloc[[idx]], 'P1', sf_t, manual_thresholds['P1']).values[0]
                     p2_score = assign_manual_tiered_scores(df.iloc[[idx]], 'P2', sf_m, manual_thresholds['P2']).values[0]
                     p3_score = assign_manual_tiered_scores(df.iloc[[idx]], 'P3', sf_c, manual_thresholds['P3']).values[0]
-                    
                     s_vec = np.array([p1_score, p2_score, p3_score])
                     
-                    # 2. Applica Monte Carlo sui pesi
                     c_ops = np.exp(np.dot(W_ops, np.log(s_vec + 1e-9)))
-                    
                     W_oss = rng.dirichlet(np.ones(10)*20, 1000)
                     s_oss = df.loc[idx, s_cols].to_numpy(dtype=float)
                     c_oss = np.exp(np.dot(W_oss, np.log(s_oss+1e-9)))
