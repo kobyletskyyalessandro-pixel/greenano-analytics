@@ -1,7 +1,7 @@
-dash              
-dash-bootstrap
+dash
+dash-bootstrap-components
 flask
-pandas            
-numpy            
-streamlit         
-plotly            
+pandas
+numpy
+streamlit
+plotly
