@@ -143,119 +143,39 @@ def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dic
 
 @st.cache_data
 def load_and_sync_data():
+
+    # --- carica file ---
+    df = pd.read_csv("AF_vectors.csv")
+    db = pd.read_csv("Materials Database 1.csv")
+
+    # --- pulizia / setup ---
+    ...
+
+    # --- optional element-derived metrics ---
     try:
-        df = pd.read_csv("AF_vectors.csv")
-        db = pd.read_csv("Materials Database 1.csv")
+        v_hhi  = _build_prop_vector(db, "HHI")
+        v_esg  = _build_prop_vector(db, "ESG")
+        v_sr   = _build_prop_vector(db, "Supply risk")
+        v_comp = _build_prop_vector(db, "Companionality (%)")
 
+        df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
+        df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
+        df["Supply risk"] = _weighted_avg_with_nan_propagation(af_matrix, v_sr)
+        df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
 
+    except Exception:
+        pass
 
+    # --- weakest-link metrics ---
+    df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
+    df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
 
+    # --- cleanup ---
+    for c in ["P1", "P2", "P3"]:
+        if c in df.columns:
+            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
-
-
-                # ---- MERGE METRICHE DI SOSTENIBILITÀ DAL DB MATERIALI ----
-        sust_cols = ["HHI", "ESG", "Companionality (%)"]
-        available = [c for c in sust_cols if c in db.columns]
-        
-        if "Material_Name" in db.columns and available:
-            df = df.merge(
-                db[["Material_Name"] + available],
-                on="Material_Name",
-                how="left"
-            )
-        else:
-            missing = set(sust_cols) - set(available)
-            if missing:
-                st.warning(f"Colonne sostenibilità mancanti nel Materials DB: {missing}")
-
-
-
-
-
-
-
-
-
-
-
-        
-
-        if "Z" not in db.columns:
-            raise ValueError("Nel database elementi manca la colonna 'Z' (1..118).")
-        db = db.dropna(subset=["Z"]).copy()
-        db["Z"] = pd.to_numeric(db["Z"], errors="coerce").astype("Int64")
-        db = db.dropna(subset=["Z"]).copy()
-        db["Z"] = db["Z"].astype(int)
-
-        elem_col = None
-        for c in db.columns:
-            if "element" in str(c).lower():
-                elem_col = c
-                break
-
-        elem_symbols_by_Z = None
-        if elem_col is not None:
-            tmp = db[["Z", elem_col]].dropna()
-            elem_symbols_by_Z = {int(z): str(sym).strip() for z, sym in zip(tmp["Z"], tmp[elem_col])}
-
-        v_prod_raw = _build_prop_vector(db, "production")
-        v_res_raw  = _build_prop_vector(db, "reserve")
-
-        v_prod, v_res, proxy_info = _apply_proxies(v_prod_raw, v_res_raw, elem_symbols_by_Z)
-
-        af_cols = [f"AF_{i}" for i in range(1, 119)]
-        missing_af = [c for c in af_cols if c not in df.columns]
-        if missing_af:
-            raise ValueError(f"Mancano colonne AF nel file AF_vectors.csv (esempi): {missing_af[:5]}")
-
-        af_matrix = df[af_cols].fillna(0.0).to_numpy(dtype=float)
-
-
-                # --- Sustainability / market metrics from element DB (material-level aggregation) ---
-        # these are ELEMENT-level in the DB -> we aggregate to MATERIAL-level via AF weights
-        try:
-            v_hhi  = _build_prop_vector(db, "HHI")
-            v_esg  = _build_prop_vector(db, "ESG")
-            v_sr   = _build_prop_vector(db, "Supply risk")
-            v_comp = _build_prop_vector(db, "Companionality (%)")   # matches "Companionality (%)"
-        
-            df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
-            df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
-            df["Supply risk"] = _weighted_avg_with_nan_propagation(af_matrix, v_sr)
-            df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
-        
-        except Exception as _e:
-            # non blocchiamo l'app se manca qualcosa
-            pass
-
-
-
-
-
-
-
-
-        
-
-        df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
-        df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
-
-        df["Calc_Production"] = af_matrix @ np.nan_to_num(v_prod, nan=0.0)
-        df["Calc_Reserves"]   = af_matrix @ np.nan_to_num(v_res,  nan=0.0)
-
-       # Do NOT compute SS here.
-# If S1..S10 are missing, we cannot compute SS later -> stop.
-        if not all(f"S{i}" in df.columns for i in range(1, 11)):
-            raise ValueError("Missing S1..S10 columns in AF_vectors.csv. SS cannot be computed.")
-        
-            for c in ["P1", "P2", "P3"]:
-                if c in df.columns:
-                    df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
-    
-            df.attrs["proxy_info"] = proxy_info
-            df.attrs["has_elem_symbols"] = bool(elem_symbols_by_Z)
-    
-            return df
+    return df
         
             except Exception as e:
                 st.error(f"Errore caricamento o sincronizzazione database: {e}")
