@@ -335,93 +335,63 @@ if df is not None:
                              use_container_width=True, height=500)
 
         with t2:
-            # ✅ (MODIFICA 2) Scalability weakest-link: Plong vs Pmax, log-log, colored by OSS
-            st.markdown("### Scalability (Weakest-link)")
-            st.caption("y = Pmax = min(P_i / x_i),  x = Plong = min(R_i / x_i).  (x_i = AF_i)")
-
-            if "Pmax_t_per_yr" not in df.columns or "Plong_t" not in df.columns:
-                st.error("Mancano Pmax_t_per_yr / Plong_t. Controlla che AF_1..AF_118 e production/reserve siano disponibili.")
-            else:
-                df_plot = df.dropna(subset=["Pmax_t_per_yr", "Plong_t", "OSS"]).copy()
-
-                # clip for log-scale safety
-                df_plot["Pmax_t_per_yr"] = pd.to_numeric(df_plot["Pmax_t_per_yr"], errors="coerce").clip(lower=1e-12)
-                df_plot["Plong_t"] = pd.to_numeric(df_plot["Plong_t"], errors="coerce").clip(lower=1e-12)
-
-import plotly.graph_objects as go
-
-# --- scegli la colonna metrica ---
-metric_col = color_metric  # "OSS", "Companionanily", "HHI", "ESG"
-
-if metric_col not in df_plot.columns:
-    st.warning(f"Colonna '{metric_col}' non trovata nel file. Uso 'OSS' come fallback.")
-    metric_col = "OSS"
-
-# --- split NaN vs non-NaN per colore neutro ---
-df_nonan = df_plot[df_plot[metric_col].notna()].copy()
-df_nan   = df_plot[df_plot[metric_col].isna()].copy()
-
-# safety per log
-df_nonan["Pmax_t_per_yr"] = pd.to_numeric(df_nonan["Pmax_t_per_yr"], errors="coerce").clip(lower=1e-12)
-df_nonan["Plong_t"]       = pd.to_numeric(df_nonan["Plong_t"], errors="coerce").clip(lower=1e-12)
-df_nan["Pmax_t_per_yr"]   = pd.to_numeric(df_nan["Pmax_t_per_yr"], errors="coerce").clip(lower=1e-12)
-df_nan["Plong_t"]         = pd.to_numeric(df_nan["Plong_t"], errors="coerce").clip(lower=1e-12)
-
-fig_sc = go.Figure()
-
-# --- trace non-NaN (colorbar) ---
-if len(df_nonan) > 0:
-    fig_sc.add_trace(go.Scatter(
-        x=df_nonan["Plong_t"],
-        y=df_nonan["Pmax_t_per_yr"],
-        mode="markers",
-        name=metric_col,
-        marker=dict(
-            size=np.where(df_nonan.get("Status","Standard") == "Optimal Choice", 4, 2),
-            color=df_nonan[metric_col].astype(float),
-            colorscale="Viridis",
-            showscale=True,
-            colorbar=dict(title=f"{metric_col} (grey = NaN)"),
-            opacity=0.9
-        ),
-        text=df_nonan["Material_Name"] if "Material_Name" in df_nonan.columns else None,
-        hovertemplate=(
-            "%{text}<br>"
-            "Plong=%{x:.3g}<br>"
-            "Pmax=%{y:.3g}<br>"
-            f"{metric_col}=%{{marker.color:.3f}}<extra></extra>"
-        )
-    ))
-
-# --- trace NaN (colore neutro + voce legenda) ---
-if len(df_nan) > 0:
-    fig_sc.add_trace(go.Scatter(
-        x=df_nan["Plong_t"],
-        y=df_nan["Pmax_t_per_yr"],
-        mode="markers",
-        name=f"{metric_col}: missing (NaN)",
-        marker=dict(
-            size=np.where(df_nan.get("Status","Standard") == "Optimal Choice", 4, 2),
-            color="lightgrey",
-            opacity=0.9
-        ),
-        text=df_nan["Material_Name"] if "Material_Name" in df_nan.columns else None,
-        hovertemplate=(
-            "%{text}<br>"
-            "Plong=%{x:.3g}<br>"
-            "Pmax=%{y:.3g}<br>"
-            f"{metric_col}=NaN<extra></extra>"
-        )
-    ))
-
-fig_sc.update_layout(
-    template="plotly_white",
-    height=650,
-    xaxis=dict(type="log", title="Long-term production (tons)  [min(R_i/x_i)]"),
-    yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
-    legend_title_text="Legend",
-)
-                
+            
+                st.markdown("### Scalability (Weakest-link)")
+            
+                metric_col = color_metric
+            
+                if metric_col not in df_plot.columns:
+                    st.warning(f"Colonna '{metric_col}' non trovata. Uso 'OSS' come fallback.")
+                    metric_col = "OSS"
+            
+                df_nonan = df_plot[df_plot[metric_col].notna()].copy()
+                df_nan   = df_plot[df_plot[metric_col].isna()].copy()
+            
+                for d in (df_nonan, df_nan):
+                    d["Pmax_t_per_yr"] = pd.to_numeric(d["Pmax_t_per_yr"], errors="coerce").clip(lower=1e-12)
+                    d["Plong_t"]       = pd.to_numeric(d["Plong_t"], errors="coerce").clip(lower=1e-12)
+            
+                fig_sc = go.Figure()
+            
+                if len(df_nonan) > 0:
+                    fig_sc.add_trace(go.Scatter(
+                        x=df_nonan["Plong_t"],
+                        y=df_nonan["Pmax_t_per_yr"],
+                        mode="markers",
+                        name=metric_col,
+                        marker=dict(
+                            size=np.where(df_nonan.get("Status","Standard") == "Optimal Choice", 4, 2),
+                            color=df_nonan[metric_col].astype(float),
+                            colorscale="Viridis",
+                            showscale=True,
+                            colorbar=dict(title=f"{metric_col} (grey = NaN)"),
+                            opacity=0.9
+                        ),
+                        text=df_nonan["Material_Name"] if "Material_Name" in df_nonan.columns else None,
+                    ))
+            
+                if len(df_nan) > 0:
+                    fig_sc.add_trace(go.Scatter(
+                        x=df_nan["Plong_t"],
+                        y=df_nan["Pmax_t_per_yr"],
+                        mode="markers",
+                        name=f"{metric_col}: missing (NaN)",
+                        marker=dict(
+                            size=np.where(df_nan.get("Status","Standard") == "Optimal Choice", 4, 2),
+                            color="lightgrey",
+                            opacity=0.9
+                        ),
+                        text=df_nan["Material_Name"] if "Material_Name" in df_nan.columns else None,
+                    ))
+            
+                fig_sc.update_layout(
+                    template="plotly_white",
+                    height=650,
+                    xaxis=dict(type="log", title="Long-term production (tons)  [min(R_i/x_i)]"),
+                    yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
+                    legend_title_text="Legend",
+                )
+            
                 st.plotly_chart(fig_sc, use_container_width=True)
                     color_continuous_scale="Viridis",
                 )
