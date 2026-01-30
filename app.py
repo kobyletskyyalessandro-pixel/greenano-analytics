@@ -328,11 +328,11 @@ st.markdown(
 
 
 
-    # metriche richieste (se mancano colonne -> fallback + warning nel tab)
-    color_metric = st.selectbox(
-    "Coloring Metric",
-    ["SS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
-    index=0
+# metriche richieste (se mancano colonne -> fallback + warning nel tab)
+color_metric = st.selectbox(
+"Coloring Metric",
+["SS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
+index=0
 )
 
 
