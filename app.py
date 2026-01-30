@@ -393,8 +393,7 @@ if df is not None:
                 )
             
                 st.plotly_chart(fig_sc, use_container_width=True)
-                    color_continuous_scale="Viridis",
-                )
+                    
                 fig_sc.update_layout(template="plotly_white", height=650)
                 st.plotly_chart(fig_sc, use_container_width=True)
 
