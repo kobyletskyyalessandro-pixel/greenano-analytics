@@ -13,64 +13,42 @@ st.markdown("""
     
     :root { 
         --primary: #1e3a8a;    /* Midnight Blue */
-        --secondary: #2563eb;  /* Royal Blue */
         --bg: #f8fafc;         /* Light Background */
-        --text: #0f172a;       /* Dark Text */
     }
     
-    /* 1. RESET GENERALE */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc;
-        color: #1e3a8a;
-    }
-    html, body, .stApp { 
-        font-family: 'Inter', sans-serif; 
-        background-color: #f8fafc; 
-        color: #1e3a8a; 
-    }
+    /* RESET GENERALE */
+    [data-testid="stAppViewContainer"] { background-color: #f8fafc; color: #1e3a8a; }
+    html, body, .stApp { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #1e3a8a; }
     
-    /* 2. SIDEBAR BIANCA */
+    /* SIDEBAR BIANCA */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* 3. INPUT BOX & SELECTBOX: STILE DEFAULT PULITO (Bianco/Grigio) */
+    /* INPUT BOX & SELECTBOX: BIANCO, BORDO GRIGIO, TESTO BLU */
     div[data-baseweb="select"] > div,
     div[data-baseweb="input"] {
         background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important; /* Bordo Grigio Chiaro */
+        border: 1px solid #cbd5e1 !important; /* Grigio */
         border-radius: 8px !important;
         color: #1e3a8a !important;
     }
-    
-    /* Testo dentro gli input */
     input[type="number"], div[data-baseweb="select"] span {
-        color: #1e3a8a !important; /* Blu scuro */
+        color: #1e3a8a !important;
         -webkit-text-fill-color: #1e3a8a !important;
         caret-color: #1e3a8a !important;
         font-weight: 600 !important;
-        background-color: transparent !important;
     }
-    
-    /* Icone grigie */
-    div[data-baseweb="select"] svg, 
-    div[data-baseweb="input"] button {
+    div[data-baseweb="select"] svg, div[data-baseweb="input"] button {
         color: #64748b !important;
         fill: #64748b !important;
-        background-color: transparent !important;
     }
 
-    /* 4. LABEL SIDEBAR */
-    section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important;
-        font-weight: 700;
-        font-size: 14px;
-    }
-    
-    /* 5. TITOLI & CARD */
+    /* TITOLI HEADER */
     h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
     
+    /* CARD PRINCIPALI */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white !important; 
         border-radius: 12px; 
@@ -79,17 +57,12 @@ st.markdown("""
         color: #1e3a8a !important;
     }
     
-    /* 6. BOTTONI AZIONE */
+    /* BOTTONI */
     div.stButton > button {
         background-color: #1e3a8a !important;
         color: white !important;
         border-radius: 8px;
         border: none;
-        font-weight: 600;
-    }
-    div.stButton > button:hover {
-        background-color: #2563eb !important;
-        transform: translateY(-2px);
     }
     </style>
     """, unsafe_allow_html=True)
@@ -100,8 +73,8 @@ def blue_header(text):
     <div style="
         background-color: #1e3a8a; 
         color: white; 
-        padding: 10px 15px; 
-        border-radius: 8px; 
+        padding: 8px 12px; 
+        border-radius: 6px; 
         margin-bottom: 10px; 
         font-weight: 700;
         font-size: 14px;
@@ -110,7 +83,7 @@ def blue_header(text):
     </div>
     """, unsafe_allow_html=True)
 
-# --- MOTORE DI CALCOLO (TIER SYSTEM) ---
+# --- MOTORE DI CALCOLO ---
 SF_SCORE_MAP = {
     2: [1.0, 0.5],
     3: [1.0, 0.6, 0.3],
@@ -180,40 +153,50 @@ st.title("Materials Intelligence Platform")
 st.markdown("""
 <div style="padding: 15px; border-left: 5px solid #1e3a8a; background-color: white; margin-bottom: 25px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
     <h4 style="margin:0; color:#1e3a8a;">🚀 Calculation Engine</h4>
-    <p style="margin:0; color:#475569;">Configure <b>Tiers (Subcategories)</b> and <b>Weights</b> to rank materials dynamically.</p>
+    <p style="margin:0; color:#475569;">Configure Tiers and Weights to rank materials.</p>
 </div>
 """, unsafe_allow_html=True)
 
 df = load_data()
 
 if df is not None:
-    # --- SIDEBAR (NESSUN TITOLO "SETTINGS") ---
+    # --- SIDEBAR ---
+    st.sidebar.header("Settings") # Titolo semplice senza riquadro
     
     # 1. TIERS
-    blue_header("1. Performance Tiers")
     with st.sidebar:
+        blue_header("1. Performance Tiers")
         sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) 
         sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)
         sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3)
         st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
     # 2. WEIGHTS
-    blue_header("2. Coefficients")
     with st.sidebar:
+        blue_header("2. Coefficients")
         w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
         rem = 1.0 - w_p1
         w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riassunto Pesi (Box Blu Scuro)
+        # RIASSUNTO: BIANCO, BORDO GRIGIO, SCRITTA BLU
         st.markdown(f"""
-        <div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px; font-weight: 500;">
+        <div style="
+            background-color: white; 
+            color: #1e3a8a; 
+            padding: 10px; 
+            border: 1px solid #cbd5e1; 
+            border-radius: 8px; 
+            text-align: center; 
+            margin-top: 10px; 
+            font-weight: 600;
+            font-size: 14px;">
             Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.info("Sustainability data is fixed (LCA).")
+        st.caption("Sustainability data is fixed (LCA).")
 
     # --- CALCOLO ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
@@ -231,7 +214,7 @@ if df is not None:
             df['OSS'] = 0.5
 
         # --- TABS ---
-        tab1, tab2, tab3 = st.tabs(["🏆 Pareto Ranking", "🏭 Supply Chain", "🔬 Stability"])
+        tab1, tab2, tab3 = st.tabs(["🏆 Ranking", "🏭 Criticality", "🔬 Stability"])
 
         with tab1:
             colA, colB = st.columns([2, 1])
@@ -245,12 +228,12 @@ if df is not None:
                     color_discrete_map={'Optimal': '#1e3a8a', 'Standard': '#cbd5e1'},
                     opacity=0.9
                 )
-                fig.update_layout(template="plotly_white", xaxis_title="OPS (Tiered Score)", yaxis_title="OSS (Sustainability)")
+                fig.update_layout(template="plotly_white", xaxis_title="OPS (Performance)", yaxis_title="OSS (Sustainability)")
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
                 st.markdown("**Top Materials**")
-                st.dataframe(df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS', 'P1']], use_container_width=True, height=500)
+                st.dataframe(df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS']], use_container_width=True, height=500)
 
         with tab2:
             if 'Pmax_t_per_yr' in df.columns:
