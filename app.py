@@ -353,7 +353,7 @@ if df is not None:
                     x="Plong_t",
                     y="Pmax_t_per_yr",
                     color="OSS",
-                    size=np.full(len(df_plot), 4),
+                    size=np.full(len(df_plot), 1),
                     hover_name="Material_Name" if "Material_Name" in df_plot.columns else None,
                     log_x=True,
                     log_y=True,
