@@ -21,7 +21,7 @@ st.markdown("""
     /* FORZA TEMA CHIARO GLOBALE */
     [data-testid="stAppViewContainer"] {
         background-color: #f8fafc;
-        color: #0f172a;
+        color: #1e3a8a; /* Default Text BLUE */
     }
     
     html, body, .stApp { 
@@ -33,71 +33,67 @@ st.markdown("""
     /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 1px solid #e2e8f0;
+        border-right: 2px solid #e2e8f0;
     }
     
-    /* Testi generici sidebar -> BLU */
+    /* Testi sidebar -> TUTTO BLU */
     section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important;
-        font-weight: 700 !important;
+        color: #1e3a8a !important; /* Label Blu */
+        font-weight: 800 !important;
     }
     
-    section[data-testid="stSidebar"] p, small, .caption {
-        color: #64748b !important;
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] span, 
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] small, 
+    section[data-testid="stSidebar"] .caption {
+        color: #1e3a8a !important; /* TUTTO BLU, NIENTE NERO/GRIGIO */
     }
     
-    /* --- INPUT BOXES (STILE SPECIFICO RICHIESTO) --- */
+    /* --- INPUT BOXES (ONLY BLUE STYLE) --- */
     
     /* 1. IL CONTENITORE (BOX) */
     div[data-baseweb="input"] {
         background-color: #ffffff !important; /* SFONDO BIANCO */
-        border: 2px solid #1e3a8a !important; /* BORDO BLU (spesso 2px) */
+        border: 2px solid #1e3a8a !important; /* BORDO BLU SPAESSO */
         border-radius: 8px !important;
-        padding: 0px !important;
-        overflow: hidden; /* Mantiene i bottoni dentro i bordi arrotondati */
     }
     
-    /* 2. IL TESTO (NUMERO) -> GRIGIO SCURO */
+    /* 2. IL TESTO (NUMERO) -> BLU SCURO */
     input[type="number"] {
-        color: #334155 !important; /* GRIGIO SCURO */
-        -webkit-text-fill-color: #334155 !important;
-        caret-color: #334155 !important;
-        font-weight: 600 !important;
+        color: #1e3a8a !important; /* NUMERO BLU */
+        -webkit-text-fill-color: #1e3a8a !important;
+        caret-color: #1e3a8a !important;
+        font-weight: 800 !important; /* Molto grassetto */
         background-color: white !important;
         padding-left: 10px !important;
     }
     
-    /* 3. I BOTTONI +/- -> SFONDO BLU, SIMBOLI BIANCHI */
+    /* 3. I BOTTONI +/- -> SFONDO BLU */
     div[data-baseweb="input"] button {
-        background-color: #1e3a8a !important; /* SFONDO BLU */
-        color: #ffffff !important; /* SIMBOLI BIANCHI */
+        background-color: #1e3a8a !important; /* Sfondo Blu */
+        color: #ffffff !important; /* Simbolo Bianco */
         border: none !important;
-        border-left: 1px solid rgba(255,255,255,0.2) !important; /* Separatore sottile */
         height: 100% !important;
+        width: 30px !important;
         margin: 0 !important;
-        flex-grow: 0;
     }
     
-    /* Simboli SVG dentro i bottoni */
     div[data-baseweb="input"] button svg {
         fill: white !important;
         color: white !important;
     }
-    
-    div[data-baseweb="input"] button:hover {
-        background-color: #2563eb !important; /* Blu più chiaro al passaggio */
-    }
 
     /* --- TITOLI --- */
-    h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 700; }
+    h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 800; }
     
     /* --- CARD --- */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        color: #0f172a !important;
+        box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1); /* Ombra Bluastra */
+        color: #1e3a8a !important;
     }
     
     /* --- BOTTONI APP --- */
@@ -107,7 +103,7 @@ st.markdown("""
         border-radius: 8px; 
         border: none; 
         padding: 12px 24px; 
-        font-weight: 600; 
+        font-weight: 700; 
     }
     div.stButton > button:hover { 
         background-color: var(--secondary); 
@@ -129,7 +125,7 @@ def blue_pill_header(text, icon=""):
         margin-bottom: 15px; 
         font-weight: 700; 
         font-size: 15px; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2);
         display: flex; align-items: center; gap: 8px;">
         <span style="opacity:1; color: white;">{icon}</span> <span style="color: white;">{text}</span>
     </div>
@@ -184,12 +180,12 @@ st.markdown("""
 <div style="
     background-color: white; 
     padding: 16px; 
-    border-left: 5px solid #1e3a8a; 
+    border-left: 6px solid #1e3a8a; 
     border-radius: 6px; 
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.1); 
     margin-bottom: 25px;">
     <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🔬 Scientific Dashboard</h4>
-    <p style="margin: 0; font-size: 15px; color: #475569;">
+    <p style="margin: 0; font-size: 15px; color: #1e3a8a;">
         Customize <b>Performance Thresholds</b> in the sidebar. 
         Sustainability scores are scientifically fixed.
     </p>
