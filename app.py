@@ -470,12 +470,13 @@ with t2:
         ))
 
     fig_sc.update_layout(
-        template="plotly_white",
-        height=650,
-        xaxis=dict(type="log", title="Long-term production (tons)  [min(R_i/x_i)]"),
-        yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
-        legend_title_text="Legend",
-    )
+    template="plotly_white",
+    height=650,
+    xaxis=dict(type="log", title="Long-term production (tons)  [min(R_i/x_i)]"),
+    yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
+    legend_title_text="Legend",
+    legend=dict(orientation="h", y=-0.25, x=0.0),
+)
 
     st.caption(f"Number of materials plotted: {len(df_plot)}")
     st.plotly_chart(fig_sc, use_container_width=True)
