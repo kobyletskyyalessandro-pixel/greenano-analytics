@@ -18,63 +18,83 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
+    /* Forza il tema chiaro globale */
+    [data-testid="stAppViewContainer"] {
+        background-color: var(--bg);
+        color: var(--text);
+    }
+    
     html, body, .stApp { 
         font-family: 'Inter', sans-serif; 
         background-color: var(--bg); 
         color: var(--text); 
     }
     
-    /* --- SIDEBAR: SFONDO BIANCO --- */
+    /* --- SIDEBAR: BIANCA --- */
     section[data-testid="stSidebar"] {
-        background-color: #ffffff;
+        background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Labels (Scritte sopra i box) */
-    section[data-testid="stSidebar"] label {
+    /* Testi sidebar */
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] label, 
+    section[data-testid="stSidebar"] .stMarkdown {
         color: #1e3a8a !important; /* Blu scuro */
-        font-weight: 600;
-        font-size: 14px;
     }
     
-    section[data-testid="stSidebar"] p, small {
-        color: #64748b !important; /* Grigio scuro per descrizioni */
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] small, 
+    section[data-testid="stSidebar"] .caption {
+        color: #64748b !important; /* Grigio */
     }
     
-    /* --- INPUT BOXES (BIANCHE E PULITE) --- */
+    /* --- FIX BOXES NERE: FORZA BIANCO SU INPUT --- */
+    /* Container dell'input */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important; /* BIANCO */
-        border: 1px solid #cbd5e1; /* Bordo Grigio Chiaro */
-        border-radius: 8px;
+        background-color: #ffffff !important; /* SFONDO BIANCO */
+        border: 1px solid #94a3b8 !important; /* Bordo Grigio/Blu */
+        color: #1e3a8a !important; /* Testo Blu Scuro */
     }
     
-    /* Quando ci clicchi sopra diventa bordo blu */
-    div[data-baseweb="input"]:focus-within {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
-    }
-    
-    /* IL NUMERO DENTRO IL BOX (SCURO) */
-    div[data-baseweb="input"] input {
-        color: #0f172a !important; /* Testo Scuro */
+    /* Il testo dentro l'input */
+    input[type="number"] {
+        color: #1e3a8a !important; /* NUMERI BLU SCURO */
+        -webkit-text-fill-color: #1e3a8a !important;
         background-color: transparent !important;
         font-weight: 600;
     }
     
-    /* Tasti +/- del number input */
+    /* Bottoni +/- dentro l'input */
     div[data-baseweb="input"] button {
+        background-color: transparent !important;
         color: #64748b !important;
     }
+
+    /* --- TITOLI & BOTTONI --- */
+    h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 700; }
     
-    /* --- TITOLI --- */
-    h1, h2, h3 { color: var(--primary) !important; font-weight: 700; }
+    div.stButton > button:first-child { 
+        background-color: var(--primary); 
+        color: white !important; 
+        border-radius: 8px; 
+        border: none; 
+        padding: 12px 24px; 
+        font-weight: 600; 
+    }
+    div.stButton > button:hover { 
+        background-color: var(--secondary); 
+        transform: translateY(-2px); 
+    }
     
-    /* --- CARD BIANCHE --- */
+    /* Card Bianche */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     
     .block-container { padding-top: 1rem; }
@@ -154,7 +174,7 @@ st.markdown("""
     <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🔬 Scientific Dashboard</h4>
     <p style="margin: 0; font-size: 15px; color: #475569;">
         Customize <b>Performance Thresholds</b> in the sidebar. 
-        Sustainability scores (OSS) are fixed by methodology.
+        Sustainability scores are scientifically fixed.
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -190,7 +210,7 @@ if df is not None:
         w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Box riassuntivo (Blu con testo bianco per stacco)
+        # Box riassuntivo (Blu con testo bianco)
         st.markdown(f"""
         <div style="
             background-color: #1e3a8a; 
