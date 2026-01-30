@@ -434,7 +434,7 @@ with t2:
             mode="markers",
             name=metric_col,
             marker=dict(
-                size=np.where(df_nonan.get("Status", "Standard") == "Optimal Choice", 5, 3),
+                size=np.where(df_nonan.get("Status", "Standard") == "Optimal Choice", 8, 5),
                 color=pd.to_numeric(df_nonan[metric_col], errors="coerce"),
                 colorscale="Viridis",
                 showscale=True,
@@ -458,7 +458,7 @@ with t2:
             mode="markers",
             name=f"{metric_col}: missing (NaN)",
             marker=dict(
-                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 5, 3),
+                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 8, 5),
                 color="lightgrey",
                 opacity=0.9
             ),
