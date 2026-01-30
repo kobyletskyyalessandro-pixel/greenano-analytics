@@ -32,7 +32,7 @@ st.markdown("""
 
 def clean_numeric(series):
     """Pulisce stringhe con virgole e testi e converte in numeri."""
-    return pd.to_numeric(series.astype(str).str.replace(r'[^-0-9.]', '', regex=True), errors='coerce').fillna(0)
+    return pd.to_numeric(series.astype(str).str.replace(r'[^-0.9.]', '', regex=True), errors='coerce').fillna(0)
 
 @st.cache_data
 def load_and_sync_data():
@@ -44,7 +44,6 @@ def load_and_sync_data():
         
         def get_prop_vector(col_keyword):
             col_name = [c for c in db.columns if col_keyword.lower() in c.lower()][0]
-            # Usiamo una conversione sicura elemento per elemento
             return db.set_index('Z')[col_name].apply(lambda x: clean_numeric(pd.Series([x])).iloc[0]).reindex(range(1, 119)).fillna(0).values
 
         v_prod = get_prop_vector('production')
@@ -56,16 +55,17 @@ def load_and_sync_data():
         af_cols = [f'AF_{i}' for i in range(1, 119)]
         af_matrix = df[af_cols].fillna(0).values
 
+        # Calcolo proprietà tramite prodotto vettoriale
         df['Calc_Production'] = af_matrix @ v_prod
         df['Calc_Reserves'] = af_matrix @ v_res
         df['Calc_Supply_Risk'] = af_matrix @ v_risk
         df['Calc_HHI'] = af_matrix @ v_hhi
         df['Calc_ESG'] = af_matrix @ v_esg
 
-        # Fallback per OSS se mancano colonne S1-S10
+        # Fallback per OSS se mancano S1-S10
         if not all(f'S{i}' in df.columns for i in range(1, 11)):
-            def norm(s): return 1 - (s - s.min()) / (s.max() - s.min() + 1e-9)
-            df['OSS'] = (norm(df['Calc_Supply_Risk']) + norm(df['Calc_HHI']) + norm(df['Calc_ESG'])) / 3
+            def norm(s): return (s - s.min()) / (s.max() - s.min() + 1e-9)
+            df['OSS'] = 1 - (norm(df['Calc_Supply_Risk']) + norm(df['Calc_HHI'])) / 2
             
         for c in ['P1', 'P2', 'P3']:
             df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0)
@@ -93,41 +93,40 @@ df = load_and_sync_data()
 if df is not None:
     st.sidebar.markdown('<p class="settings-title">Control Panel</p>', unsafe_allow_html=True)
     manual_thresholds = {'P1': [], 'P2': [], 'P3': []}
-    is_valid = True
     
     with st.sidebar:
         # SEZIONE 1: PERFORMANCE
         st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
-        # P1 Temperature
         sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2)
         sc_t = generate_linear_scores(sf_t)
         for i in range(sf_t - 1):
-            val = st.number_input(f"Threshold for Score {sc_t[i+1]} (P1)", value=int(350 + (i*50)), min_value=350, step=1, format="%d", key=f"p1_{i}")
+            val = st.number_input(f"Threshold Score {sc_t[i+1]} (P1)", value=int(350 + (i*50)), min_value=350, step=1, format="%d", key=f"p1_{i}")
             manual_thresholds['P1'].append(float(val))
         
-        # P2/P3
         for label, key, d_idx, d_val in [("Magnetization (T)", "P2", 1, 0.4), ("Coercivity (T)", "P3", 3, 0.4)]:
             st.markdown(f"**{label}**")
             sf = st.selectbox(f"Subcategories ({key})", [2, 3, 4, 5], index=d_idx, key=f"sf_{key}")
             sc = generate_linear_scores(sf)
             for i in range(sf - 1):
-                v = st.number_input(f"Threshold for Score {sc[i+1]} ({key})", value=d_val+(i*0.2), min_value=d_val, key=f"t_{key}_{i}")
+                v = st.number_input(f"Threshold Score {sc[i+1]} ({key})", value=d_val+(i*0.2), min_value=d_val, key=f"t_{key}_{i}")
                 manual_thresholds[key].append(v)
             if key == "P2": sf_m = sf
             else: sf_c = sf
 
-        # SEZIONE 3: VIEW SETTINGS
-        st.markdown('<div class="blue-section-header"><p>2. Scalability Settings</p></div>', unsafe_allow_html=True)
-        use_log = st.checkbox("Use Logarithmic Scale", value=False)
+        # SEZIONE 2: SCALABILITY SETTINGS
+        st.markdown('<div class="blue-section-header"><p>2. Map Visual Settings</p></div>', unsafe_allow_html=True)
+        # Il filtro per escludere gli outlier aiuta a creare la "nuvola" invece della linea
+        outlier_percentile = st.slider("Exclude Top % Abundant (to see cloud)", 0, 10, 2)
         color_metric = st.selectbox("Coloring Metric", ["OSS", "Calc_Supply_Risk", "Calc_HHI", "Calc_ESG"])
-        point_size_val = st.slider("Point Size", 5, 20, 8)
+        point_size_val = st.slider("Point Size", 3, 10, 5)
+        point_opacity = st.slider("Point Opacity", 0.1, 1.0, 0.6)
 
     # --- CALCOLI ---
     p1_s = assign_tiered_scores(df, 'P1', sf_t, manual_thresholds['P1'])
     p2_s = assign_tiered_scores(df, 'P2', sf_m, manual_thresholds['P2'])
     p3_s = assign_tiered_scores(df, 'P3', sf_c, manual_thresholds['P3'])
     
-    w_p1, w_p2, w_p3 = 0.33, 0.33, 0.34 # Default bilanciato o usa slider se preferisci
+    w_p1, w_p2, w_p3 = 0.33, 0.33, 0.34
     df['OPS'] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
     
     # --- TABS ---
@@ -151,24 +150,35 @@ if df is not None:
             st.dataframe(df[efficient].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS']], use_container_width=True, height=500)
 
     with t2:
-        st.markdown("### Resource Scalability (Vector Product)")
+        st.markdown("### Resource Distribution Cloud (Linear Scale)")
+        st.caption("Lowering the 'Exclude Top %' slider in the sidebar will show the full scale, but may crush the 'cloud' into a line.")
+
+        # FILTRO OUTLIER: se non tolgo i materiali con ferro/alluminio (10^9), i materiali critici (10^3) spariscono
+        cutoff_prod = np.percentile(df['Calc_Production'], 100 - outlier_percentile)
+        cutoff_res = np.percentile(df['Calc_Reserves'], 100 - outlier_percentile)
         
-        df_plot = df.copy()
-        if use_log:
-            df_plot['Calc_Production'] = df_plot['Calc_Production'].clip(lower=1e-1)
-            df_plot['Calc_Reserves'] = df_plot['Calc_Reserves'].clip(lower=1e-1)
+        df_plot = df[(df['Calc_Production'] <= cutoff_prod) & (df['Calc_Reserves'] <= cutoff_res)].copy()
         
-        fig_sc = px.scatter(df_plot, x='Calc_Reserves', y='Calc_Production', 
+        fig_sc = px.scatter(df_plot, 
+                            x='Calc_Reserves', 
+                            y='Calc_Production', 
                             color=color_metric, 
-                            hover_name='Material_Name', # MOSTRA IL NOME SUL PUNTATORE
-                            hover_data=['Chemical_Formula', 'Calc_Supply_Risk', 'Calc_HHI', 'Calc_ESG'],
-                            log_x=use_log, log_y=use_log,
+                            hover_name='Material_Name', # NOME VISIBILE AL PUNTATORE
+                            hover_data={
+                                'Chemical_Formula': True,
+                                'Calc_Reserves': ':.2e',
+                                'Calc_Production': ':.2e',
+                                'Calc_Supply_Risk': ':.2f'
+                            },
                             color_continuous_scale="Viridis",
-                            labels={'Calc_Reserves': 'Global Reserves (t)', 'Calc_Production': 'Annual Production (t/yr)'})
+                            labels={'Calc_Reserves': 'Reserves (t)', 'Calc_Production': 'Production (t/yr)'})
         
-        # PUNTI PIÙ PICCOLI E PULITI
-        fig_sc.update_traces(marker=dict(size=point_size_val, line=dict(width=0.5, color='white')))
-        fig_sc.update_layout(template="plotly_white", height=650)
+        # PUNTI PICCOLI E TRASPARENTI PER EFFETTO NUVOLA
+        fig_sc.update_traces(marker=dict(size=point_size_val, opacity=point_opacity, line=dict(width=0)))
+        fig_sc.update_layout(template="plotly_white", height=700, 
+                             xaxis=dict(showgrid=True, zeroline=True), 
+                             yaxis=dict(showgrid=True, zeroline=True))
+        
         st.plotly_chart(fig_sc, use_container_width=True)
 
     with t3:
