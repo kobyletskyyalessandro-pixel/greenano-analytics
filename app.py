@@ -388,7 +388,7 @@ with t2:
             mode="markers",
             name=f"{metric_col}: missing (NaN)",
             marker=dict(
-                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 5, 3),
+                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 8, 5),
                 color="lightgrey",
                 opacity=0.9
             ),
