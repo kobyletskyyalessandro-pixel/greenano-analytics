@@ -116,7 +116,7 @@ st.markdown("""
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
-        background-color: #1e3a8a; 
+        background-color: white; 
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
