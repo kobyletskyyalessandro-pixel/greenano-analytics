@@ -154,7 +154,7 @@ def load_and_sync_data():
 
 
                 # ---- MERGE METRICHE DI SOSTENIBILITÀ DAL DB MATERIALI ----
-        sust_cols = ["HHI", "ESG", "Companionality %"]
+        sust_cols = ["HHI", "ESG", "Companionality (%)"]
         available = [c for c in sust_cols if c in db.columns]
         
         if "Material_Name" in db.columns and available:
@@ -217,7 +217,7 @@ def load_and_sync_data():
             v_hhi  = _build_prop_vector(db, "HHI")
             v_esg  = _build_prop_vector(db, "ESG")
             v_sr   = _build_prop_vector(db, "Supply risk")
-            v_comp = _build_prop_vector(db, "Companionality")   # matches "Companionality (%)"
+            v_comp = _build_prop_vector(db, "Companionality (%)")   # matches "Companionality (%)"
         
             df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
             df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
