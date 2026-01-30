@@ -403,20 +403,18 @@ with t2:
     st.markdown("### Scalability (Weakest-link)")
     st.caption("y = Pmax = min(P_i / x_i),  x = Plong = min(R_i / x_i).  (x_i = AF_i)")
 
-    # df_plot qui era la cosa che ti mancava
     df_plot = df.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
 
-    # fallback se la colonna non esiste
     metric_col = color_metric
     if metric_col not in df_plot.columns:
         st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'OSS' come fallback.")
         metric_col = "OSS"
 
-    # se anche OSS manca, mettiamo tutti NaN (così finisce nel grigio e non crasha)
     if metric_col not in df_plot.columns:
         df_plot[metric_col] = np.nan
 
-    # split NaN vs non-NaN per colore neutro + legenda dedicata
+    short_label = "Comp. (%)" if metric_col == "Companionality (%)" else metric_col
+
     df_nonan = df_plot[df_plot[metric_col].notna()].copy()
     df_nan   = df_plot[df_plot[metric_col].isna()].copy()
 
@@ -426,71 +424,51 @@ with t2:
 
     fig_sc = go.Figure()
 
-    # punti con valore valido (colorbar)
+    # --- NON-NaN: colorati + colorbar
     if len(df_nonan) > 0:
-        short_label = "Comp. (%)" if metric_col == "Companionality (%)" else metric_col
         fig_sc.add_trace(go.Scatter(
-            x=df_nonan["Plong_t"],
-            y=df_nonan["Pmax_t_per_yr"],
+            x=df_nonan["Plong_t"].astype(float),
+            y=df_nonan["Pmax_t_per_yr"].astype(float),
             mode="markers",
-            name="Comp. (%)" if metric_col == "Companionality (%)" else metric_col,
+            name=short_label,
             marker=dict(
                 size=np.where(df_nonan.get("Status", "Standard") == "Optimal Choice", 10, 7),
                 color=pd.to_numeric(df_nonan[metric_col], errors="coerce"),
                 colorscale="Viridis",
                 showscale=True,
                 colorbar=dict(title=short_label + " (grey = NaN)"),
-                opacity=0.9
+                opacity=0.9,
+            ),
+            text=df_nonan["Material_Name"].astype(str) if "Material_Name" in df_nonan.columns else None,
+            hovertemplate=(
+                "%{text}<br>"
+                "Plong=%{x:.3g}<br>"
+                "Pmax=%{y:.3g}<br>"
+                + metric_col + "=%{marker.color:.3g}<extra></extra>"
             ),
         ))
-        text=df_nonan["Material_Name"] if "Material_Name" in df_nonan.columns else None,
-        hovertemplate=(
-            "%{text}<br>"
-            "Plong=%{x:.3g}<br>"
-            "Pmax=%{y:.3g}<br>"
-            f"{metric_col}=%{{marker.color}}<extra></extra>"
-        )
-    ))
 
-    # punti con NaN (grigio + legenda)
+    # --- NaN: grigi (no colorbar)
     if len(df_nan) > 0:
-    fig_sc.add_trace(go.Scatter(
-        x=df_nan["Plong_t"].astype(float),
-        y=df_nan["Pmax_t_per_yr"].astype(float),
-        mode="markers",
-        name=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (NaN)",
-        marker=dict(
-            size=8,              # <-- qui regoli la dimensione dei grigi
-            color="lightgrey",
-            opacity=0.9
-        ),
-        hovertemplate=(
-            "%{text}<br>"
-            "Plong=%{x:.3g}<br>"
-            "Pmax=%{y:.3g}<br>"
-            f"{metric_col}=NaN<extra></extra>"
-        ),
-        text=(df_nan["Material_Name"].astype(str) if "Material_Name" in df_nan.columns else None),
-    ))
+        fig_sc.add_trace(go.Scatter(
+            x=df_nan["Plong_t"].astype(float),
+            y=df_nan["Pmax_t_per_yr"].astype(float),
+            mode="markers",
+            name=short_label + " (NaN)",
+            marker=dict(
+                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 10, 7),
+                color="lightgrey",
+                opacity=0.9,
+            ),
+            text=df_nan["Material_Name"].astype(str) if "Material_Name" in df_nan.columns else None,
+            hovertemplate=(
+                "%{text}<br>"
+                "Plong=%{x:.3g}<br>"
+                "Pmax=%{y:.3g}<br>"
+                + metric_col + "=NaN<extra></extra>"
+            ),
+        ))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
     fig_sc.update_layout(
         template="plotly_white",
         height=650,
@@ -498,9 +476,9 @@ with t2:
         yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
         legend_title_text="Legend",
     )
+
     st.caption(f"Number of materials plotted: {len(df_plot)}")
     st.plotly_chart(fig_sc, use_container_width=True)
-
 with t3:
     opts = df[df["Status"] == "Optimal Choice"]["Material_Name"].unique() if "Material_Name" in df.columns else []
     if len(opts) > 0:
