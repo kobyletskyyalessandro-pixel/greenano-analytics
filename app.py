@@ -347,13 +347,26 @@ with st.sidebar:
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
     # metriche richieste (se mancano colonne -> fallback + warning nel tab)
-
-
     color_metric = st.selectbox(
     "Coloring Metric",
     ["OSS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
     index=0
 )
+
+
+
+
+
+
+    
+    st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
+    
+    trend_metrics = st.multiselect(
+        "Metrics to test vs H = log(Pmax)+log(Plong)",
+        ["OSS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        default=["OSS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
+)
+
 
 
 
@@ -368,7 +381,12 @@ p3_s = assign_tiered_scores(df, "P3", sf_c, manual_thresholds["P3"]) if "P3" in 
 
 df["OPS"] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
 
-t1, t2, t3 = st.tabs(["🏆 Pareto Ranking", "🏭 Scalability Map", "🔬 Stability Analysis"])
+t1, t2, t3, t4 = st.tabs([
+    "🏆 Pareto Ranking",
+    "🏭 Scalability Map",
+    "🔬 Stability Analysis",
+    "📈 Top-right Trend"
+])
 
 with t1:
     colA, colB = st.columns([2, 1])
@@ -499,3 +517,101 @@ with t3:
             st.plotly_chart(fig_mc, use_container_width=True)
     else:
         st.info("No Pareto-optimal materials found with current settings.")
+
+
+
+with t4:
+    st.markdown("### Does a metric increase when moving top-right?")
+    st.caption("We test each metric Y against H = log(Pmax) + log(Plong). NaN points are ignored.")
+
+    base = df.copy()
+
+    base = base.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
+    base = base[(base["Pmax_t_per_yr"] > 0) & (base["Plong_t"] > 0)].copy()
+
+    if len(base) == 0:
+        st.warning("No valid points with Pmax>0 and Plong>0.")
+        st.stop()
+
+    H = np.log(base["Pmax_t_per_yr"].to_numpy(dtype=float)) + np.log(base["Plong_t"].to_numpy(dtype=float))
+    base["_H_"] = H
+
+    label_map = {
+        "Companionality (%)": "Comp. (%)",
+        "Supply risk": "Supply risk",
+        "HHI": "HHI",
+        "ESG": "ESG",
+        "OSS": "OSS",
+    }
+
+    cols = st.columns(2)
+    col_idx = 0
+
+    for metric in trend_metrics:
+        if metric not in base.columns:
+            st.info(f"Metric '{metric}' not found in dataframe → skipped.")
+            continue
+
+        tmp = base[["_H_", metric]].copy()
+        tmp[metric] = pd.to_numeric(tmp[metric], errors="coerce")
+        tmp = tmp.dropna(subset=[metric, "_H_"]).copy()
+
+        if len(tmp) < 3:
+            st.info(f"Not enough valid points for '{metric}' (n={len(tmp)}).")
+            continue
+
+        x = tmp["_H_"].to_numpy(dtype=float)
+        y = tmp[metric].to_numpy(dtype=float)
+
+        m, q = np.polyfit(x, y, 1)
+        y_hat = m * x + q
+
+        ss_res = np.sum((y - y_hat) ** 2)
+        ss_tot = np.sum((y - np.mean(y)) ** 2) + 1e-30
+        r2 = 1 - ss_res / ss_tot
+
+        r = np.corrcoef(x, y)[0, 1]
+        rho = pd.Series(x).rank().corr(pd.Series(y).rank(), method="pearson")
+
+        dof = max(len(y) - 2, 1)
+        sigma = np.std(y - y_hat) + 1e-12
+        chi2 = np.sum(((y - y_hat) / sigma) ** 2)
+        chi2_red = chi2 / dof
+
+        short = label_map.get(metric, metric)
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=x,
+            y=y,
+            mode="markers",
+            name=short,
+            marker=dict(size=8, opacity=0.85),
+        ))
+
+        xs = np.linspace(np.min(x), np.max(x), 200)
+        fig.add_trace(go.Scatter(
+            x=xs,
+            y=m * xs + q,
+            mode="lines",
+            name="Trend",
+        ))
+
+        fig.update_layout(
+            template="plotly_white",
+            height=420,
+            title=f"{short} vs H  (n={len(y)}, slope={m:.3g}, R²={r2:.3g})",
+            xaxis_title="H = log(Pmax) + log(Plong)",
+            yaxis_title=short,
+            legend=dict(orientation="h", y=-0.25, x=0.0),
+            margin=dict(l=40, r=20, t=60, b=60),
+        )
+
+        with cols[col_idx]:
+            st.plotly_chart(fig, use_container_width=True)
+            st.write(
+                f"**Stats** — n={len(y)} | slope={m:.4g} | intercept={q:.4g} | "
+                f"R²={r2:.3f} | Pearson r={r:.3f} | Spearman ρ={rho:.3f} | χ²_red(proxy)={chi2_red:.2f}"
+            )
+
+        col_idx = 1 - col_idx
