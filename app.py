@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. CONFIGURAZIONE & STILE (NUCLEAR WHITE/BLUE) ---
+# --- 1. CONFIGURAZIONE & STILE ---
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
 
 st.markdown("""
@@ -20,8 +20,8 @@ st.markdown("""
     
     /* FORZA TEMA CHIARO GLOBALE */
     [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc !important;
-        color: #1e3a8a !important;
+        background-color: #f8fafc;
+        color: #0f172a;
     }
     
     html, body, .stApp { 
@@ -33,7 +33,7 @@ st.markdown("""
     /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 2px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
     }
     
     /* TESTI SIDEBAR -> BLU */
@@ -52,7 +52,17 @@ st.markdown("""
         color: #64748b !important;
     }
     
-    /* --- INPUT BOXES (NUCLEAR FIX BIANCO) --- */
+    /* --- HEADER BIANCHI (CLASSE SPECIALE) --- */
+    /* Questa classe vince su tutto per i titoli nei box blu */
+    .force-white {
+        color: #ffffff !important;
+        opacity: 1 !important;
+    }
+    .force-white span {
+        color: #ffffff !important;
+    }
+    
+    /* --- INPUT BOXES (BIANCO PURO) --- */
     div[data-baseweb="input"] {
         background-color: #ffffff !important; 
         border: 2px solid #1e3a8a !important; 
@@ -120,7 +130,6 @@ def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
         background-color: #1e3a8a; 
-        color: #ffffff !important; 
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
@@ -128,34 +137,67 @@ def blue_pill_header(text, icon=""):
         font-size: 15px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span style="opacity:1; color: #ffffff !important;">{icon}</span> 
-        <span style="color: #ffffff !important;">{text}</span>
+        <span class="force-white" style="font-size: 18px;">{icon}</span> 
+        <span class="force-white">{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
-# --- MOTORE DI CALCOLO (LOGICA DEL COLLAB) ---
-def calculate_ops(df, thresholds, weights):
+# --- MOTORE DI CALCOLO (TIER SYSTEM DAL COLAB) ---
+
+# Mappa dei punteggi basata sul numero di "Subcategories" (Tiers)
+SF_SCORE_MAP = {
+    2: [1.0, 0.5],
+    3: [1.0, 0.6, 0.3],
+    4: [1.0, 0.75, 0.5, 0.25],
+    5: [1.0, 0.8, 0.6, 0.4, 0.2]
+}
+
+def assign_tiered_scores(df, col_name, sf_value):
     """
-    Replica la logica: Score = (Valore / Soglia) ^ Peso
-    Se Valore > Soglia -> Score = 1.0 (Saturazione)
+    Assegna punteggi basati sui quartili/livelli (Logic from Colab Cell 46).
     """
-    # 1. Normalizza i valori rispetto alle soglie utente
-    # Aggiungiamo 1e-9 per evitare divisioni per zero
-    s1 = np.where(df['P1'] >= thresholds['P1'], 1.0, df['P1'] / (thresholds['P1'] + 1e-9))
-    s2 = np.where(df['P2'] >= thresholds['P2'], 1.0, df['P2'] / (thresholds['P2'] + 1e-9))
-    s3 = np.where(df['P3'] >= thresholds['P3'], 1.0, df['P3'] / (thresholds['P3'] + 1e-9))
+    # 1. Recupera la lista dei punteggi (es. [1, 0.75, 0.5, 0.25])
+    scores_list = SF_SCORE_MAP.get(sf_value, SF_SCORE_MAP[3])
     
-    # 2. Clip per sicurezza (0.001 a 1.0)
-    scores = np.column_stack((s1, s2, s3))
+    # 2. Crea una copia ordinata del DF per quella colonna (P1, P2, o P3)
+    # NaN vengono messi in fondo e trattati come ultimo livello
+    sorted_df = df.sort_values(by=col_name, ascending=False).copy()
+    
+    num_rows = len(sorted_df)
+    # Inizializza con il punteggio più basso
+    sorted_df['temp_score'] = scores_list[-1]
+    
+    # 3. Assegna i punteggi per fasce (Tiers)
+    for i in range(sf_value):
+        cut_off_start = int(num_rows * i / sf_value)
+        cut_off_end = int(num_rows * (i + 1) / sf_value)
+        
+        if i < sf_value - 1:
+            sorted_df.iloc[cut_off_start:cut_off_end, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
+        else:
+            sorted_df.iloc[cut_off_start:, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
+            
+    # Restituisce una Serie con indici allineati al DF originale
+    return sorted_df['temp_score'].sort_index()
+
+def calculate_ops_tiered(df, tiers_config, weights):
+    """
+    Calcola OPS usando il metodo dei Tiers (PS1^x * PS2^y * PS3^z).
+    """
+    # Calcola i punteggi parziali (PS1, PS2, PS3)
+    ps1 = assign_tiered_scores(df, 'P1', tiers_config['P1'])
+    ps2 = assign_tiered_scores(df, 'P2', tiers_config['P2'])
+    ps3 = assign_tiered_scores(df, 'P3', tiers_config['P3'])
+    
+    # Unisce in matrice
+    scores = np.column_stack((ps1, ps2, ps3))
     scores = np.clip(scores, 1e-3, 1.0)
     
-    # 3. Applica i pesi (Media Geometrica Pesata: S1^w1 * S2^w2 * S3^w3)
-    # Questa formula equivale a exp( sum( w * log(s) ) )
+    # Calcola Media Geometrica Pesata
     w = np.array(weights)
-    if w.sum() > 0: w = w / w.sum() # Normalizza pesi a 1
+    if w.sum() > 0: w = w / w.sum()
     
-    final_score = np.exp(np.sum(w * np.log(scores), axis=1))
-    return final_score
+    return np.exp(np.sum(w * np.log(scores), axis=1))
 
 def weighted_geometric_mean(S, w, eps=1e-12):
     S = np.clip(np.asarray(S, dtype=float), eps, 1.0)
@@ -179,7 +221,6 @@ def pareto_front(points):
 def load_data():
     try:
         df = pd.read_csv("MF_sustainability_rank.csv")
-        # Assicuriamoci che i dati siano numerici
         for col in ['P1', 'P2', 'P3']:
             if col in df.columns:
                 df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
@@ -201,7 +242,7 @@ st.markdown("""
     margin-bottom: 25px;">
     <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🚀 Advanced Analytics Module</h4>
     <p style="margin: 0; font-size: 15px; color: #1e3a8a;">
-        Re-apply your <b>Performance Thresholds</b> and <b>Coefficients</b> here to generate a live Pareto analysis.
+        Configure <b>Subcategories (Tiers)</b> and <b>Coefficients</b> to rank materials using the scientific quantile scoring method.
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -212,45 +253,39 @@ if df is not None:
     # --- SIDEBAR CONTROL PANEL ---
     st.sidebar.header("Calculation Engine")
     
-    # --- 1. SOGLIE (THRESHOLDS) ---
+    # --- 1. SOGLIE (TIERS) ---
     with st.sidebar:
-        blue_pill_header("1. Performance Thresholds", "🎯")
-        st.caption("Values required to reach max score (1.0)")
+        blue_pill_header("1. Performance Tiers", "📊")
+        st.caption("Select number of subcategories (levels) for ranking.")
         
-        # Defaults intelligenti dai dati
-        max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
-        max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 5.0
-        max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 5.0
-
-        # Input per l'utente (Riapplica le scelte del sito)
-        t_p1 = st.number_input(f"P1: Temperature (K)", value=400.0, step=10.0)
-        t_p2 = st.number_input(f"P2: Magnetization (T)", value=1.0, step=0.1)
-        t_p3 = st.number_input(f"P3: Coercivity (T)", value=1.0, step=0.1)
+        # Selectbox per i Tiers (2, 3, 4, 5) come nel Colab
+        sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) # Default 4
+        sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)  # Default 3
+        sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3) # Default 5
 
         st.markdown("<br>", unsafe_allow_html=True)
 
     # --- 2. COEFFICIENTI (WEIGHTS) ---
     with st.sidebar:
         blue_pill_header("2. Performance Coefficients", "⚖️")
-        st.caption("Set the importance (weights) for the calculation.")
+        st.caption("Set the importance weights (x, y, z).")
         
         w_p1 = st.slider("Coeff. P1 (Temp)", 0.0, 1.0, 0.33)
         rem = 1.0 - w_p1
         w_p2 = st.slider("Coeff. P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riepilogo Visivo (Sfondo Blu, testo Bianco)
+        # Riepilogo Visivo (Sfondo Blu, testo Bianco Forzato)
         st.markdown(f"""
         <div style="
             background-color: #1e3a8a; 
-            color: #ffffff !important; 
             padding: 10px; 
             border-radius: 8px; 
             margin-top: 10px; 
             text-align: center;
             font-size: 14px;
             font-weight: 500;">
-            <span style="color: white !important;">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
+            <span class="force-white">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
         </div>
         """, unsafe_allow_html=True)
         
@@ -260,13 +295,14 @@ if df is not None:
     # --- MAIN CALCULATION ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
-        # Ricalcolo OPS Live basato sugli input utente
-        thresholds = {'P1': t_p1, 'P2': t_p2, 'P3': t_p3}
+        # Configurazione Tiers
+        tiers_config = {'P1': sf_t, 'P2': sf_m, 'P3': sf_c}
         weights_perf = [w_p1, w_p2, w_p3]
         
-        df['OPS'] = calculate_ops(df, thresholds, weights_perf)
+        # Ricalcolo OPS usando la logica a livelli (Tiers)
+        df['OPS'] = calculate_ops_tiered(df, tiers_config, weights_perf)
         
-        # OSS (Sustainability) è fisso o preso dal CSV
+        # OSS (Sustainability)
         s_cols = [f"S{i}" for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             S_mat = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
@@ -283,7 +319,6 @@ if df is not None:
             
             colA, colB = st.columns([2, 1])
             with colA:
-                # Calcolo Frontiera Pareto su OPS (nuovo) vs OSS
                 mask = pareto_front(df[['OPS', 'OSS']].to_numpy())
                 df['Status'] = np.where(mask, 'Optimal Choice', 'Sub-optimal')
                 
@@ -296,14 +331,14 @@ if df is not None:
                 fig.update_traces(marker=dict(size=14, line=dict(width=1, color='white')))
                 fig.update_layout(
                     template="plotly_white", 
-                    xaxis_title="OPS (Performance Score - Calculated)", 
+                    xaxis_title="OPS (Performance Score - Tiered)", 
                     yaxis_title="OSS (Sustainability Score)",
                     legend=dict(orientation="h", y=1.1)
                 )
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
-                st.markdown("**Top Materials (Based on your inputs)**")
+                st.markdown("**Top Materials**")
                 display_cols = ['Material_Name', 'OPS', 'OSS', 'P1', 'P2', 'P3']
                 st.dataframe(
                     df[mask].sort_values(by="OPS", ascending=False)[display_cols], 
@@ -328,9 +363,8 @@ if df is not None:
         # TAB 3: MONTE CARLO
         with tab3:
             blue_pill_header("Robustness & Sensitivity", "🔬")
-            st.markdown("Test if your selected material remains optimal if weights vary slightly.")
+            st.markdown("Test ranking stability against small weight variations.")
             
-            # Filtra solo i materiali Pareto-efficienti per la selezione
             optimal_materials = df[mask]['Material_Name'].unique()
             if len(optimal_materials) > 0:
                 sel_mat = st.selectbox("Select Material:", optimal_materials)
@@ -340,21 +374,27 @@ if df is not None:
                     N = 1000
                     rng = np.random.default_rng()
                     
-                    # Simula pesi vicini a quelli scelti dall'utente (dirichlet concentrata)
                     alpha = np.array(weights_perf) * 50 + 1
                     W_ops_sim = rng.dirichlet(alpha, N)
+                    
+                    # Calcola i punteggi base (PS1, PS2, PS3) per quel materiale
+                    # Usando la funzione assign_tiered_scores ma solo per il materiale selezionato è inefficiente
+                    # Meglio usare i valori già calcolati nelle colonne P1, P2, P3 ma dobbiamo rimapparli ai tiers
+                    # Per semplicità simuliamo variando direttamente l'OPS risultante o ricalcolando localmente
+                    
+                    # Recuperiamo i PS1, PS2, PS3 impliciti dai dati ricalcolati
+                    # (Qui facciamo una simulazione semplificata basata sui pesi)
+                    
+                    # Ricostruzione score vettoriale per la simulazione
+                    ps1_val = assign_tiered_scores(df, 'P1', sf_t).loc[idx]
+                    ps2_val = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
+                    ps3_val = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
+                    s_vec = np.array([ps1_val, ps2_val, ps3_val])
+
+                    cloud_ops = np.exp(np.dot(W_ops_sim, np.log(s_vec + 1e-9)))
+                    
+                    # Per OSS usiamo simulazione standard
                     W_oss_sim = rng.dirichlet(np.ones(10) * 20, N)
-
-                    # Ricostruisci score singoli basati sulle soglie attuali
-                    s_single = []
-                    for col, thresh in zip(['P1','P2','P3'], [t_p1,t_p2,t_p3]):
-                        val = df.loc[idx, col]
-                        score = 1.0 if val >= thresh else val / (thresh + 1e-9)
-                        s_single.append(max(1e-6, score))
-                    s_vec = np.array(s_single)
-
-                    # Calcolo Nuvola
-                    cloud_ops = np.exp(np.dot(W_ops_sim, np.log(s_vec)))
                     s_oss_vec = df.loc[idx, s_cols].to_numpy(dtype=float)
                     s_oss_vec = np.clip(s_oss_vec, 1e-6, 1.0)
                     cloud_oss = np.exp(np.dot(W_oss_sim, np.log(s_oss_vec)))
@@ -365,10 +405,10 @@ if df is not None:
                     fig_mc.update_layout(template="plotly_white", xaxis_title="OPS Stability", yaxis_title="OSS Stability")
                     st.plotly_chart(fig_mc, use_container_width=True)
             else:
-                st.warning("No optimal materials found with current thresholds.")
+                st.warning("No optimal materials found.")
 
     else:
-        st.error("Missing columns P1, P2, P3 in CSV. Ensure your data file is correct.")
+        st.error("Missing columns P1, P2, P3 in CSV.")
 
 else:
     st.warning("⚠️ Upload 'MF_sustainability_rank.csv' to GitHub.")
