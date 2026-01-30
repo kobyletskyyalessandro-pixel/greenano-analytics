@@ -393,20 +393,24 @@ with st.sidebar:
         )
 
     w_sum = float(np.sum(w_in))
-    if w_sum <= 0:
-        st.warning("All sustainability weights are 0. Using equal weights (0.1 each).")
-        w_ss = np.ones(10, dtype=float) / 10.0
-    else:
-        w_ss = np.array(w_in, dtype=float) / w_sum
 
-    st.markdown(
-        f"""
-        <div class="custom-summary-box" style="padding:10px 12px; margin-top:10px;">
-            <p style="margin:0; font-size:14px;"><b>Σ weights</b>: {w_sum:.3f} → normalized to 1</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    if w_sum <= 0:
+        st.error(
+            "❌ All sustainability weights are zero. "
+            "Using equal weights xᵢ = 0.1 for all Sᵢ."
+        )
+        w_ss = np.ones(10, dtype=float) / 10.0
+    
+    elif abs(w_sum - 1.0) > 1e-6:
+        st.warning(
+            f"⚠️ Sustainability weights do not sum to 1 (Σxᵢ = {w_sum:.3f}). "
+            "Weights have been automatically normalized."
+        )
+        w_ss = np.array(w_in, dtype=float) / w_sum
+    
+    else:
+        st.success("✅ Sustainability weights are correctly normalized (Σxᵢ = 1).")
+        w_ss = np.array(w_in, dtype=float)
 
     # =========================
     # 4) TOP-RIGHT TREND
