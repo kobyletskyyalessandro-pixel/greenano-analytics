@@ -432,7 +432,7 @@ with t2:
             x=df_nonan["Plong_t"],
             y=df_nonan["Pmax_t_per_yr"],
             mode="markers",
-            name=metric_col,
+            name="Comp. (%)" if metric_col == "Companionality (%)" else metric_col,
             marker=dict(
                 size=np.where(df_nonan.get("Status", "Standard") == "Optimal Choice", 10, 7),
                 color=pd.to_numeric(df_nonan[metric_col], errors="coerce"),
@@ -456,7 +456,7 @@ with t2:
             x=df_nan["Plong_t"],
             y=df_nan["Pmax_t_per_yr"],
             mode="markers",
-            name=f"{metric_col}: missing (NaN)",
+            name=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (NaN)",
             marker=dict(
                 size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 10, 7),
                 color="lightgrey",
