@@ -396,7 +396,7 @@ with st.sidebar:
     # 3B) SUSTAINABILITY WEIGHTS
     # =========================
     st.markdown('<div class="blue-section-header"><p>3B. Sustainability Weights</p></div>', unsafe_allow_html=True)
-    st.caption("SS = Π S_i^(x_i) with Σx_i = 1. Weights are auto-normalized.")
+    st.caption("SS = Π S_i^(x_i) with Σx_i = 1. The app stops if Σx_i ≠ 1.")
 
     default_w = [0.1] * 10
     w_in = []
@@ -414,39 +414,19 @@ with st.sidebar:
 
     w_sum = float(np.sum(w_in))
 
+    w_sum = float(np.sum(w_in))
+    
     if w_sum <= 0:
-        st.error(
-            "❌ All sustainability weights are zero. "
-            "Using equal weights xᵢ = 0.1 for all Sᵢ."
-        )
-
-        
-        w_sum = float(np.sum(w_in))
-
-        if w_sum <= 0:
-            st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
-            st.stop()
-        
-        if abs(w_sum - 1.0) > 1e-6:
-            st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
-            st.stop()
-        
-        w_ss = np.array(w_in, dtype=float)
-
-
-
+        st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
+        st.stop()
     
-    elif abs(w_sum - 1.0) > 1e-6:
-        st.warning(
-            f"⚠️ Sustainability weights do not sum to 1 (Σxᵢ = {w_sum:.3f}). "
-            "Weights have been automatically normalized."
-        )
-        w_ss = np.array(w_in, dtype=float) / w_sum
+    if abs(w_sum - 1.0) > 1e-6:
+        st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
+        st.stop()
     
-    else:
-        st.success("✅ Sustainability weights are correctly normalized (Σxᵢ = 1).")
-        w_ss = np.array(w_in, dtype=float)
-
+    # ✅ se arrivi qui, la somma è 1
+    w_ss = np.array(w_in, dtype=float)
+    st.success("✅ OK: Σxᵢ = 1")
     # =========================
     # 4) TOP-RIGHT TREND
     # =========================
