@@ -24,62 +24,57 @@ st.markdown("""
         color: var(--text); 
     }
     
-    /* --- SIDEBAR --- */
+    /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
-        background-color: #ffffff; /* Sfondo Bianco */
-        border-right: 2px solid #e2e8f0;
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
     }
     
-    /* Testi nella Sidebar (Label sopra i numeri) -> BLU SCURO per leggibilità */
+    /* Labels (Scritte sopra i box) */
     section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important;
+        color: #1e3a8a !important; /* Blu scuro */
         font-weight: 600;
-    }
-    section[data-testid="stSidebar"] p, small {
-        color: #475569 !important;
+        font-size: 14px;
     }
     
-    /* --- INPUT BOXES (Quelle che erano nere) --- */
-    /* Sfondo del box dove scrivi il numero -> BLU */
+    section[data-testid="stSidebar"] p, small {
+        color: #64748b !important; /* Grigio scuro per descrizioni */
+    }
+    
+    /* --- INPUT BOXES (BIANCHE E PULITE) --- */
     div[data-baseweb="input"] {
-        background-color: #1e3a8a !important; 
-        border: 1px solid #2563eb;
+        background-color: #ffffff !important; /* BIANCO */
+        border: 1px solid #cbd5e1; /* Bordo Grigio Chiaro */
         border-radius: 8px;
     }
     
-    /* Il numero dentro il box -> BIANCO */
+    /* Quando ci clicchi sopra diventa bordo blu */
+    div[data-baseweb="input"]:focus-within {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+    }
+    
+    /* IL NUMERO DENTRO IL BOX (SCURO) */
     div[data-baseweb="input"] input {
-        color: white !important;
-        caret-color: white; /* Cursore bianco */
-        font-weight: 700;
+        color: #0f172a !important; /* Testo Scuro */
+        background-color: transparent !important;
+        font-weight: 600;
     }
     
     /* Tasti +/- del number input */
     div[data-baseweb="input"] button {
-        color: white !important;
+        color: #64748b !important;
     }
     
     /* --- TITOLI --- */
     h1, h2, h3 { color: var(--primary) !important; font-weight: 700; }
     
-    /* --- BOTTONI --- */
-    div.stButton > button:first-child { 
-        background-color: var(--primary); 
-        color: white !important; 
-        border-radius: 8px; 
-        padding: 12px 24px; 
-    }
-    div.stButton > button:hover { 
-        background-color: var(--secondary); 
-        transform: translateY(-2px); 
-    }
-    
-    /* Card Bianche */
+    /* --- CARD BIANCHE --- */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     
     .block-container { padding-top: 1rem; }
@@ -92,20 +87,19 @@ def blue_pill_header(text, icon=""):
     <div style="
         background-color: #1e3a8a; 
         color: white; 
-        padding: 12px 20px; 
-        border-radius: 20px; 
+        padding: 10px 18px; 
+        border-radius: 8px; 
         margin-bottom: 15px; 
         font-weight: 700; 
         font-size: 15px; 
-        box-shadow: 0 3px 6px rgba(0,0,0,0.15);
-        display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 18px;">{icon}</span> <span>{text}</span>
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        display: flex; align-items: center; gap: 8px;">
+        <span style="opacity:0.9">{icon}</span> <span>{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
 # --- MOTORE DI CALCOLO ---
 def calculate_ops(df, thresholds, weights):
-    # Logica Threshold: Se Valore >= Soglia -> 1.0, altrimenti proporzionale
     s1 = np.where(df['P1'] >= thresholds['P1'], 1.0, df['P1'] / (thresholds['P1'] + 1e-9))
     s2 = np.where(df['P2'] >= thresholds['P2'], 1.0, df['P2'] / (thresholds['P2'] + 1e-9))
     s3 = np.where(df['P3'] >= thresholds['P3'], 1.0, df['P3'] / (thresholds['P3'] + 1e-9))
@@ -151,16 +145,16 @@ st.title("Materials Intelligence Platform")
 
 st.markdown("""
 <div style="
-    background-color: #1e3a8a; 
-    color: white; 
-    padding: 20px; 
-    border-radius: 12px; 
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2); 
+    background-color: white; 
+    padding: 16px; 
+    border-left: 5px solid #1e3a8a; 
+    border-radius: 6px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
     margin-bottom: 25px;">
-    <h4 style="color: white !important; margin: 0 0 5px 0;">🔬 Scientific Dashboard</h4>
-    <p style="margin: 0; font-size: 15px; opacity: 0.95;">
+    <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🔬 Scientific Dashboard</h4>
+    <p style="margin: 0; font-size: 15px; color: #475569;">
         Customize <b>Performance Thresholds</b> in the sidebar. 
-        Sustainability scores are scientifically fixed.
+        Sustainability scores (OSS) are fixed by methodology.
     </p>
 </div>
 """, unsafe_allow_html=True)
@@ -171,54 +165,50 @@ if df is not None:
     # --- SIDEBAR ---
     st.sidebar.header("User Controls")
     
-    # Valori massimi per slider
-    max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
-    max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 5.0
-    max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 5.0
-
     # 1. THRESHOLDS
     with st.sidebar:
-        blue_pill_header("1. Thresholds (Goals)", "🎯")
+        blue_pill_header("1. Performance Goals", "🎯")
         st.caption("Values to achieve Score 1.0")
         
-        # P1 = TEMP
+        # Logica per valori default
+        max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
+        max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 5.0
+        max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 5.0
+
         t_p1 = st.number_input(f"P1: Temperature (K)", value=400.0, step=10.0)
-        
-        # P2 = MAGNETIZATION (Nota: User ha detto P2 è Mag)
         t_p2 = st.number_input(f"P2: Magnetization (T)", value=1.0, step=0.1)
-        
-        # P3 = COERCIVITY / ANISOTROPY
         t_p3 = st.number_input(f"P3: Coercivity (T)", value=1.0, step=0.1)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
     # 2. WEIGHTS
     with st.sidebar:
-        blue_pill_header("2. Importance Weights", "⚖️")
+        blue_pill_header("2. Priority Weights", "⚖️")
         
         w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
         rem = 1.0 - w_p1
         w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # INFO BOX PESI
+        # Box riassuntivo (Blu con testo bianco per stacco)
         st.markdown(f"""
         <div style="
             background-color: #1e3a8a; 
             color: white; 
-            padding: 12px; 
-            border-radius: 12px; 
+            padding: 10px; 
+            border-radius: 8px; 
             margin-top: 10px; 
             text-align: center;
-            font-weight: 600;">
+            font-size: 14px;
+            font-weight: 500;">
             Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.info("🌍 Sustainability (OSS) metrics are fixed.")
+        st.info("🌍 Sustainability metrics are fixed.")
 
-    # --- CALCOLO FINALE ---
+    # --- CALCOLO ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
         thresholds = {'P1': t_p1, 'P2': t_p2, 'P3': t_p3}
@@ -256,7 +246,6 @@ if df is not None:
             
             with colB:
                 st.markdown("**Top Materials List**")
-                # Mostra le colonne corrette
                 display_cols = ['Material_Name', 'OPS', 'OSS', 'P1', 'P2', 'P3']
                 st.dataframe(
                     df[mask].sort_values(by="OPS", ascending=False)[display_cols], 
@@ -288,7 +277,6 @@ if df is not None:
                 N = 1000
                 rng = np.random.default_rng()
                 
-                # Simula incertezza attorno ai pesi utente
                 alpha = np.array(weights_perf) * 50 + 1
                 W_ops_sim = rng.dirichlet(alpha, N)
                 W_oss_sim = rng.dirichlet(np.ones(10) * 20, N)
@@ -301,7 +289,6 @@ if df is not None:
                 s_vec = np.array(s_single)
 
                 cloud_ops = np.exp(np.dot(W_ops_sim, np.log(s_vec)))
-                
                 s_oss_vec = df.loc[idx, s_cols].to_numpy(dtype=float)
                 s_oss_vec = np.clip(s_oss_vec, 1e-6, 1.0)
                 cloud_oss = np.exp(np.dot(W_oss_sim, np.log(s_oss_vec)))
