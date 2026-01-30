@@ -4,90 +4,109 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. CONFIGURAZIONE & STILE (CLEAN & SIMPLE) ---
+# --- 1. CONFIGURAZIONE & STILE ---
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
-    /* COLORE PRINCIPALE: BLU NOTTE */
-    :root { --primary: #1e3a8a; }
+    :root { 
+        --primary: #1e3a8a;    /* Midnight Blue */
+        --secondary: #2563eb;  /* Royal Blue */
+        --bg: #f8fafc;         /* Light Background */
+        --text: #0f172a;       /* Dark Text */
+    }
     
-    /* 1. SIDEBAR: SFONDO BIANCO */
+    /* 1. RESET GENERALE */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f8fafc;
+        color: #1e3a8a;
+    }
+    html, body, .stApp { 
+        font-family: 'Inter', sans-serif; 
+        background-color: #f8fafc; 
+        color: #1e3a8a; 
+    }
+    
+    /* 2. SIDEBAR BIANCA */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* 2. INPUT BOX (NUMERI): SFONDO BLU, SCRITTA BIANCA */
+    /* 3. INPUT BOX & SELECTBOX (TIERS): STILE DEFAULT PULITO */
+    /* Sfondo bianco, bordo grigio, testo scuro */
+    div[data-baseweb="select"] > div,
     div[data-baseweb="input"] {
-        background-color: #1e3a8a !important; /* SFONDO BLU */
-        border: 1px solid #1e3a8a !important;
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important; /* Grigio Default */
         border-radius: 8px !important;
-        color: white !important;
+        color: #1e3a8a !important;
     }
     
-    /* Il numero dentro la box */
-    input[type="number"] {
-        color: white !important;
-        -webkit-text-fill-color: white !important; /* Forza bianco su Chrome/Safari */
-        background-color: #1e3a8a !important;
-        font-weight: 700 !important;
+    /* Testo dentro gli input */
+    input[type="number"], div[data-baseweb="select"] span {
+        color: #1e3a8a !important; /* Blu scuro per leggibilità */
+        -webkit-text-fill-color: #1e3a8a !important;
+        caret-color: #1e3a8a !important;
+        font-weight: 600 !important;
+        background-color: transparent !important;
     }
     
-    /* I pulsanti +/- */
+    /* Pulsanti dropdown e +/- */
+    div[data-baseweb="select"] svg, 
     div[data-baseweb="input"] button {
-        color: white !important;
-        background-color: #1e3a8a !important;
-    }
-    
-    /* Icone dentro i pulsanti +/- */
-    div[data-baseweb="input"] svg {
-        fill: white !important;
+        color: #64748b !important; /* Grigio per le icone */
+        fill: #64748b !important;
+        background-color: transparent !important;
     }
 
-    /* 3. DROPDOWN (SELECTBOX): STILE SIMILE */
-    div[data-baseweb="select"] > div {
-        background-color: #1e3a8a !important;
-        color: white !important;
-        border-radius: 8px;
-    }
-    div[data-baseweb="select"] span {
-        color: white !important;
-    }
-    
-    /* 4. LABEL SIDEBAR (Es. "Tiers for P1") */
+    /* 4. LABEL SIDEBAR */
     section[data-testid="stSidebar"] label {
         color: #1e3a8a !important;
         font-weight: 700;
         font-size: 14px;
     }
-
-    /* 5. TITOLI PRINCIPALI */
+    
+    /* 5. TITOLI & CARD */
     h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
     
-    /* 6. BOTTONI GENERALI */
+    div[data-testid="stVerticalBlock"] > div { 
+        background-color: white !important; 
+        border-radius: 12px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        color: #1e3a8a !important;
+    }
+    
+    /* 6. BOTTONI AZIONE */
     div.stButton > button {
         background-color: #1e3a8a !important;
         color: white !important;
         border-radius: 8px;
         border: none;
+        font-weight: 600;
+    }
+    div.stButton > button:hover {
+        background-color: #2563eb !important;
+        transform: translateY(-2px);
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER (BOX BLU SEMPLICE) ---
+# --- HELPER HEADER (TITOLI BLU) ---
 def blue_header(text):
     st.markdown(f"""
     <div style="
         background-color: #1e3a8a; 
         color: white; 
-        padding: 12px; 
+        padding: 10px 15px; 
         border-radius: 8px; 
         margin-bottom: 10px; 
         font-weight: 700;
-        text-align: center;">
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         {text}
     </div>
     """, unsafe_allow_html=True)
@@ -159,11 +178,10 @@ def load_data():
 
 st.title("Materials Intelligence Platform")
 
-# Intro box (Bianco con bordo blu)
 st.markdown("""
-<div style="padding: 15px; border-left: 5px solid #1e3a8a; background-color: white; margin-bottom: 25px;">
+<div style="padding: 15px; border-left: 5px solid #1e3a8a; background-color: white; margin-bottom: 25px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
     <h4 style="margin:0; color:#1e3a8a;">🚀 Calculation Engine</h4>
-    <p style="margin:0; color:#1e3a8a;">Configure Tiers & Weights to generate the Pareto Analysis.</p>
+    <p style="margin:0; color:#475569;">Configure <b>Tiers (Subcategories)</b> and <b>Weights</b> to rank materials dynamically.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -173,15 +191,15 @@ if df is not None:
     # --- SIDEBAR ---
     st.sidebar.header("Settings")
     
-    # 1. TIERS
+    # 1. TIERS (Box Bianco con bordo Grigio)
     blue_header("1. Performance Tiers")
     with st.sidebar:
         sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) 
         sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)
         sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3)
-        st.write("") # Spazio
+        st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-    # 2. WEIGHTS
+    # 2. WEIGHTS (Slider Standard)
     blue_header("2. Coefficients")
     with st.sidebar:
         w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
@@ -189,15 +207,15 @@ if df is not None:
         w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # RIASSUNTO PESI (BOX BLU, SCRITTA BIANCA)
+        # Riassunto Pesi (Box Blu Scuro)
         st.markdown(f"""
-        <div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px;">
+        <div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px; font-weight: 500;">
             Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.info("Sustainability data is fixed.")
+        st.info("Sustainability data is fixed (LCA).")
 
     # --- CALCOLO ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
@@ -225,7 +243,7 @@ if df is not None:
                 
                 fig = px.scatter(
                     df, x='OPS', y='OSS', color='Status',
-                    hover_name='Material_Name',
+                    hover_name='Material_Name', hover_data=['Chemical_Formula'],
                     color_discrete_map={'Optimal': '#1e3a8a', 'Standard': '#cbd5e1'},
                     opacity=0.9
                 )
@@ -254,12 +272,11 @@ if df is not None:
                     rng = np.random.default_rng()
                     W_ops = rng.dirichlet(np.array(weights_perf)*50+1, 1000)
                     
-                    # Recupero valori Tier
                     ps1 = assign_tiered_scores(df, 'P1', sf_t).loc[idx]
                     ps2 = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
                     ps3 = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
                     
-                    c_ops = np.exp(np.dot(W_ops, np.log([ps1, ps2, ps3])))
+                    c_ops = np.exp(np.dot(W_ops, np.log([ps1, ps2, ps3] + np.array([1e-9]*3))))
                     W_oss = rng.dirichlet(np.ones(10)*20, 1000)
                     s_oss = df.loc[idx, s_cols].to_numpy(dtype=float)
                     c_oss = np.exp(np.dot(W_oss, np.log(s_oss+1e-9)))
