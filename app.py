@@ -177,9 +177,7 @@ def load_and_sync_data():
 
     return df
         
-    except Exception as e:
-        st.error(f"Errore caricamento o sincronizzazione database: {e}")
-        return None
+    
 
 # --- 3. MOTORE DI CALCOLO RANKING ---
 def generate_linear_scores(n_tiers):
