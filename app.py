@@ -18,10 +18,10 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
-    /* Forza il tema chiaro globale */
+    /* FORZA TEMA CHIARO GLOBALE */
     [data-testid="stAppViewContainer"] {
-        background-color: var(--bg);
-        color: var(--text);
+        background-color: #f8fafc;
+        color: #0f172a;
     }
     
     html, body, .stApp { 
@@ -30,52 +30,61 @@ st.markdown("""
         color: var(--text); 
     }
     
-    /* --- SIDEBAR: BIANCA --- */
+    /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Testi sidebar */
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3, 
-    section[data-testid="stSidebar"] label, 
-    section[data-testid="stSidebar"] .stMarkdown {
-        color: #1e3a8a !important; /* Blu scuro */
-    }
-    
+    /* Testi generici sidebar */
     section[data-testid="stSidebar"] p, 
-    section[data-testid="stSidebar"] small, 
-    section[data-testid="stSidebar"] .caption {
-        color: #64748b !important; /* Grigio */
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div {
+        color: #334155 !important;
     }
     
-    /* --- FIX BOXES NERE: FORZA BIANCO SU INPUT --- */
-    /* Container dell'input */
+    /* Labels sopra gli input (es. "P1: Temperature") -> BLU */
+    div[data-testid="stSidebar"] label {
+        color: #1e3a8a !important;
+        font-weight: 700 !important;
+    }
+    
+    /* --- INPUT BOXES (LA PARTE CRITICA) --- */
+    
+    /* 1. IL CONTENITORE (BOX) -> BIANCO */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important; /* SFONDO BIANCO */
-        border: 1px solid #94a3b8 !important; /* Bordo Grigio/Blu */
-        color: #1e3a8a !important; /* Testo Blu Scuro */
+        background-color: #ffffff !important; /* BIANCO */
+        border: 1px solid #cbd5e1 !important; /* Bordo Grigio */
+        border-radius: 8px !important;
     }
     
-    /* Il testo dentro l'input */
+    /* 2. IL TESTO (NUMERO) -> GRIGIO */
     input[type="number"] {
-        color: #1e3a8a !important; /* NUMERI BLU SCURO */
-        -webkit-text-fill-color: #1e3a8a !important;
+        color: #334155 !important; /* GRIGIO SCURO */
+        -webkit-text-fill-color: #334155 !important; /* Fix per Safari/Chrome */
+        caret-color: #334155 !important; /* Cursore Grigio */
+        font-weight: 600 !important;
         background-color: transparent !important;
-        font-weight: 600;
     }
     
-    /* Bottoni +/- dentro l'input */
+    /* 3. I BOTTONI +/- -> GRIGI */
     div[data-baseweb="input"] button {
         background-color: transparent !important;
         color: #64748b !important;
     }
-
-    /* --- TITOLI & BOTTONI --- */
+    
+    /* --- TITOLI --- */
     h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 700; }
     
+    /* --- CARD --- */
+    div[data-testid="stVerticalBlock"] > div { 
+        background-color: white; 
+        border-radius: 12px; 
+        border: 1px solid #e2e8f0; 
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* --- BOTTONI --- */
     div.stButton > button:first-child { 
         background-color: var(--primary); 
         color: white !important; 
@@ -87,14 +96,6 @@ st.markdown("""
     div.stButton > button:hover { 
         background-color: var(--secondary); 
         transform: translateY(-2px); 
-    }
-    
-    /* Card Bianche */
-    div[data-testid="stVerticalBlock"] > div { 
-        background-color: white; 
-        border-radius: 12px; 
-        border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     
     .block-container { padding-top: 1rem; }
@@ -190,13 +191,17 @@ if df is not None:
         blue_pill_header("1. Performance Goals", "🎯")
         st.caption("Values to achieve Score 1.0")
         
-        # Logica per valori default
         max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
         max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 5.0
         max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 5.0
 
+        # P1 = TEMP
         t_p1 = st.number_input(f"P1: Temperature (K)", value=400.0, step=10.0)
+        
+        # P2 = MAGNETIZATION
         t_p2 = st.number_input(f"P2: Magnetization (T)", value=1.0, step=0.1)
+        
+        # P3 = COERCIVITY / ANISOTROPY
         t_p3 = st.number_input(f"P3: Coercivity (T)", value=1.0, step=0.1)
 
         st.markdown("<br>", unsafe_allow_html=True)
