@@ -428,6 +428,7 @@ with t2:
 
     # punti con valore valido (colorbar)
     if len(df_nonan) > 0:
+        short_label = "Comp. (%)" if metric_col == "Companionality (%)" else metric_col
         fig_sc.add_trace(go.Scatter(
             x=df_nonan["Plong_t"],
             y=df_nonan["Pmax_t_per_yr"],
@@ -438,7 +439,7 @@ with t2:
                 color=pd.to_numeric(df_nonan[metric_col], errors="coerce"),
                 colorscale="Viridis",
                 showscale=True,
-                colorbar=dict(title=f"{metric_col} (grey = NaN)"),
+                colorbar=dict(title=short_label + " (grey = NaN)"),
                 opacity=0.9
             ),
             text=df_nonan["Material_Name"] if "Material_Name" in df_nonan.columns else None,
@@ -452,27 +453,43 @@ with t2:
 
     # punti con NaN (grigio + legenda)
     if len(df_nan) > 0:
-        fig_sc.add_trace(go.Scatter(
-            x=df_nan["Plong_t"],
-            y=df_nan["Pmax_t_per_yr"],
-            mode="markers",
-            colorbar=dict(
-            title=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (grey = NaN)"
-            ),    
-            marker=dict(
-                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 10, 7),
-                color="lightgrey",
-                opacity=0.9
-            ),
-            text=df_nan["Material_Name"] if "Material_Name" in df_nan.columns else None,
-            hovertemplate=(
-                "%{text}<br>"
-                "Plong=%{x:.3g}<br>"
-                "Pmax=%{y:.3g}<br>"
-                f"{metric_col}=NaN<extra></extra>"
-            )
-        ))
+    fig_sc.add_trace(go.Scatter(
+        x=df_nan["Plong_t"].astype(float),
+        y=df_nan["Pmax_t_per_yr"].astype(float),
+        mode="markers",
+        name=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (NaN)",
+        marker=dict(
+            size=8,              # <-- qui regoli la dimensione dei grigi
+            color="lightgrey",
+            opacity=0.9
+        ),
+        hovertemplate=(
+            "%{text}<br>"
+            "Plong=%{x:.3g}<br>"
+            "Pmax=%{y:.3g}<br>"
+            f"{metric_col}=NaN<extra></extra>"
+        ),
+        text=(df_nan["Material_Name"].astype(str) if "Material_Name" in df_nan.columns else None),
+    ))
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     fig_sc.update_layout(
         template="plotly_white",
         height=650,
