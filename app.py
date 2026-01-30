@@ -466,13 +466,13 @@ with st.sidebar:
 
     eps_ops = st.slider(
         "ε on OPS (tolerance)",
-        0.0, 0.20, 0.05, 0.01,
+        0.0, 0.60, 0.20, 0.02,
         help="0 = hard Pareto. 0.05 means 'allow 5% worse OPS' and still keep near-front points."
     )
 
     eps_ss = st.slider(
         "ε on SS (tolerance)",
-        0.0, 0.20, 0.05, 0.01,
+        0.0, 0.40, 0.05, 0.01,
         help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
     )
 
