@@ -256,7 +256,7 @@ with st.sidebar:
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
     # metriche richieste (se mancano colonne -> fallback + warning nel tab)
-    color_metric = st.selectbox("Coloring Metric", ["OSS", "Companionality", "HHI", "ESG"], index=0)
+    color_metric = st.selectbox("Coloring Metric", ["OSS", "Companionality %", "HHI", "ESG"], index=0)
 
 # --- CALCOLI ---
 p1_s = assign_tiered_scores(df, "P1", sf_t, manual_thresholds["P1"]) if "P1" in df.columns else 1.0
