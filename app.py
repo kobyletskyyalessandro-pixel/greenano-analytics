@@ -417,11 +417,10 @@ p3_s = assign_tiered_scores(df, "P3", sf_c, manual_thresholds["P3"]) if "P3" in 
 
 df["OPS"] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
 
-t1, t2, t4, t3 = st.tabs([
+t1, t2, t3 = st.tabs([
     "🏆 Pareto Ranking",
     "🏭 Scalability Map",
-    "📈 Top-right Trend",
-    "🔬 Stability Analysis"
+    "📈 Top-right Trend"
 ])
 
 with t1:
@@ -534,29 +533,9 @@ with t2:
 
     st.caption(f"Number of materials plotted: {len(df_plot)}")
     st.plotly_chart(fig_sc, use_container_width=True)
+
+
 with t3:
-    opts = df[df["Status"] == "Optimal Choice"]["Material_Name"].unique() if "Material_Name" in df.columns else []
-    if len(opts) > 0:
-        sel = st.selectbox("Select a Material to test:", opts)
-        if st.button("Run Simulation ⚡"):
-            idx = df[df["Material_Name"] == sel].index[0]
-            rng = np.random.default_rng()
-            W_sim = rng.dirichlet(np.array([w_p1, w_p2, w_p3]) * 50 + 1, 1000)
-            s_vec = np.array([p1_s[idx], p2_s[idx], p3_s[idx]], dtype=float)
-            c_ops = np.exp(np.dot(W_sim, np.log(s_vec + 1e-9)))
-            fig_mc = px.scatter(
-                x=c_ops,
-                y=[df.loc[idx, "SS"]] * 1000,
-                opacity=0.3,
-            )
-            fig_mc.update_layout(template="plotly_white")
-            st.plotly_chart(fig_mc, use_container_width=True)
-    else:
-        st.info("No Pareto-optimal materials found with current settings.")
-
-
-
-with t4:
     st.markdown("### Does a metric increase when moving top-right?")
     st.caption("We test each metric Y against H = log(Pmax) + log(Plong). NaN points are ignored.")
 
