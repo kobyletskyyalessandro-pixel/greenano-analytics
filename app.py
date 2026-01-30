@@ -348,7 +348,7 @@ if df is not None:
                 df_plot["Pmax_t_per_yr"] = pd.to_numeric(df_plot["Pmax_t_per_yr"], errors="coerce").clip(lower=1e-12)
                 df_plot["Plong_t"] = pd.to_numeric(df_plot["Plong_t"], errors="coerce").clip(lower=1e-12)
 
-                                import plotly.graph_objects as go
+import plotly.graph_objects as go
                 
                 # --- scegli la colonna metrica ---
                 metric_col = color_metric  # "OSS", "Companionanily", "HHI", "ESG"
