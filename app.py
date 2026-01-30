@@ -346,7 +346,24 @@ with st.sidebar:
     # =========================
     # 1) PERFORMANCE TIERS
     # =========================
-    st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
+    col_set, col_guide = st.columns([3, 1])
+    
+    with col_set:
+        st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
+    
+    with col_guide:
+        GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
+        if os.path.exists(GUIDE_PATH):
+            with open(GUIDE_PATH, "rb") as f:
+                st.download_button(
+                    label="📘",
+                    data=f,
+                    file_name="GreenNanoAnalyticsGuide.pdf",
+                    mime="application/pdf",
+                    help="Download User Guide",
+                )
+        else:
+            st.write("")  # niente se manca
 
     # P1 Temperature
     sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2, key="sf_P1")
@@ -481,24 +498,6 @@ with st.sidebar:
 
 
 
-    # =========================
-    # GUIDE DOWNLOAD
-    # =========================
-    st.markdown('<div class="blue-section-header"><p>Guide</p></div>', unsafe_allow_html=True)
-
-    GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
-
-    if os.path.exists(GUIDE_PATH):
-        with open(GUIDE_PATH, "rb") as f:
-            st.download_button(
-                label="📘 Download User Guide (PDF)",
-                data=f,
-                file_name="GreenNanoAnalyticsGuide.pdf",
-                mime="application/pdf",
-                use_container_width=True,
-            )
-    else:
-        st.warning("Guide PDF not found.")
 
 
 
