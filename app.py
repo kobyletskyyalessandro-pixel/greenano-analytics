@@ -88,7 +88,6 @@ def assign_tiered_scores(df, col_name, n_tiers, thresholds):
     scores = generate_linear_scores(n_tiers)
     assigned = pd.Series(scores[0], index=df.index, dtype=float)
     
-    # Applichiamo dalla soglia più bassa alla più alta per sovrascrivere verso l'alto
     for i in range(len(thresholds)):
         val = thresholds[i]
         sc = scores[i+1]
@@ -123,17 +122,18 @@ if df is not None:
         # SEZIONE 1: TIERS & THRESHOLDS
         st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
         
-        # P1: TEMP (Step impostato a 1.0 per cambiare le unità)
+        # P1: TEMP (Senza .0 di default)
         st.markdown("**P1: Temperature (K)**")
         sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2)
         sc_t = generate_linear_scores(sf_t)
         for i in range(sf_t - 1):
             val = st.number_input(f"Threshold for Score {sc_t[i+1]} (P1)", 
-                                  value=350.0 + (i*50), 
-                                  min_value=350.0, 
-                                  step=1.0, 
+                                  value=int(350 + (i*50)), 
+                                  min_value=350, 
+                                  step=1, 
+                                  format="%d",
                                   key=f"p1_{i}")
-            manual_thresholds['P1'].append(val)
+            manual_thresholds['P1'].append(float(val))
         if any(manual_thresholds['P1'][i] >= manual_thresholds['P1'][i+1] for i in range(len(manual_thresholds['P1'])-1)):
             st.error("Error: P1 thresholds must be strictly ascending!")
             is_valid = False
@@ -177,14 +177,12 @@ if df is not None:
 
     # --- CALCOLO E VISUALIZZAZIONE ---
     if is_valid:
-        # Calcolo Score Performance (OPS) = P1^w1 * P2^w2 * P3^w3
         p1_s = assign_tiered_scores(df, 'P1', sf_t, manual_thresholds['P1'])
         p2_s = assign_tiered_scores(df, 'P2', sf_m, manual_thresholds['P2'])
         p3_s = assign_tiered_scores(df, 'P3', sf_c, manual_thresholds['P3'])
         
         df['OPS'] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
         
-        # Calcolo Score Sostenibilità (OSS)
         s_cols = [f'S{i}' for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             s_data = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
