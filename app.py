@@ -18,22 +18,21 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
-    /* FORZA TEMA CHIARO GLOBALE */
+    /* RESET GLOBALE: APP BIANCA, TESTO BLU */
     [data-testid="stAppViewContainer"] {
         background-color: #f8fafc;
-        color: #0f172a;
+        color: #1e3a8a;
     }
-    
     html, body, .stApp { 
         font-family: 'Inter', sans-serif; 
-        background-color: var(--bg); 
-        color: var(--text); 
+        background-color: #f8fafc; 
+        color: #1e3a8a; 
     }
     
     /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 1px solid #e2e8f0;
+        border-right: 2px solid #e2e8f0;
     }
     
     /* TESTI SIDEBAR STANDARD -> BLU */
@@ -42,34 +41,32 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 14px;
     }
-    /* Questo colpisce il testo generico, ma NON quello con stile inline specifico */
     section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] span,
     section[data-testid="stSidebar"] li {
-        color: #1e3a8a;
+        color: #1e3a8a !important;
     }
-    
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
         color: #64748b !important;
     }
     
-    /* --- INPUT BOXES (BIANCO PURO) --- */
+    /* --- INPUT BOXES (BIANCO PURO, BORDO BLU, NUMERI BLU) --- */
     div[data-baseweb="input"] {
         background-color: #ffffff !important; 
         border: 2px solid #1e3a8a !important; 
         border-radius: 8px !important;
         padding: 0px !important;
     }
-    
     div[data-baseweb="input"] input {
         background-color: #ffffff !important; 
-        color: #1e3a8a !important; /* NUMERI BLU */
+        color: #1e3a8a !important; 
         -webkit-text-fill-color: #1e3a8a !important;
         caret-color: #1e3a8a !important;
         font-weight: 800 !important;
         padding-left: 10px !important;
     }
-
     /* PULSANTI +/- */
     div[data-baseweb="input"] button {
         background-color: #1e3a8a !important; 
@@ -86,10 +83,18 @@ st.markdown("""
         background-color: #2563eb !important;
     }
 
-    /* TITOLI */
+    /* --- NUCLEAR FIX PER SCRITTE BIANCHE NEI BOX BLU --- */
+    /* Qualsiasi cosa dentro un elemento con classe 'force-white-container' diventa bianca */
+    .force-white-container {
+        color: #ffffff !important;
+    }
+    .force-white-container * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+
+    /* TITOLI & CARD */
     h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
-    
-    /* CARD */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white !important; 
         border-radius: 12px; 
@@ -116,10 +121,10 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER BLU (CON FORZATURA BIANCO) ---
+# --- HELPER HEADER BLU (CON CLASSE NUCLEAR FIX) ---
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
-    <div style="
+    <div class="force-white-container" style="
         background-color: #1e3a8a; 
         padding: 10px 18px; 
         border-radius: 8px; 
@@ -128,8 +133,8 @@ def blue_pill_header(text, icon=""):
         font-size: 15px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span style="color: #ffffff !important; font-size: 18px;">{icon}</span> 
-        <span style="color: #ffffff !important;">{text}</span>
+        <span>{icon}</span> 
+        <span>{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -243,9 +248,9 @@ if df is not None:
         w_p2 = st.slider("Coeff. P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riepilogo Visivo (CON FORZATURA BIANCO)
+        # Riepilogo Visivo (CON CLASSE NUCLEAR FIX)
         st.markdown(f"""
-        <div style="
+        <div class="force-white-container" style="
             background-color: #1e3a8a; 
             padding: 10px; 
             border-radius: 8px; 
@@ -253,7 +258,7 @@ if df is not None:
             text-align: center;
             font-size: 14px;
             font-weight: 500;">
-            <span style="color: #ffffff !important; font-weight: bold;">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
+            Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
         </div>
         """, unsafe_allow_html=True)
         
