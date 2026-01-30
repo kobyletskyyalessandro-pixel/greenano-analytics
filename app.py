@@ -123,7 +123,7 @@ def load_and_sync_data():
 
 
                 # ---- MERGE METRICHE DI SOSTENIBILITÀ DAL DB MATERIALI ----
-        sust_cols = ["HHI", "ESG", "Companionality"]
+        sust_cols = ["HHI", "ESG", "Companionality %"]
         available = [c for c in sust_cols if c in db.columns]
         
         if "Material_Name" in db.columns and available:
