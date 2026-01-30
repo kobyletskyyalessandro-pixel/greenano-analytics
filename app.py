@@ -36,7 +36,7 @@ st.markdown("""
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Testi generici sidebar (Label sopra i numeri) -> BLU */
+    /* Testi generici sidebar -> BLU */
     section[data-testid="stSidebar"] label {
         color: #1e3a8a !important;
         font-weight: 700 !important;
@@ -46,20 +46,20 @@ st.markdown("""
         color: #64748b !important;
     }
     
-    /* --- INPUT BOXES --- */
+    /* --- INPUT BOXES (STILE SPECIFICO RICHIESTO) --- */
     
-    /* 1. IL CONTENITORE (BOX) -> BIANCO */
+    /* 1. IL CONTENITORE (BOX) */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important;
+        background-color: #ffffff !important; /* SFONDO BIANCO */
+        border: 2px solid #1e3a8a !important; /* BORDO BLU (spesso 2px) */
         border-radius: 8px !important;
-        padding: 0px !important; /* Rimuovi padding per far toccare i bottoni ai lati */
-        overflow: hidden; /* Per i bordi arrotondati dei bottoni */
+        padding: 0px !important;
+        overflow: hidden; /* Mantiene i bottoni dentro i bordi arrotondati */
     }
     
     /* 2. IL TESTO (NUMERO) -> GRIGIO SCURO */
     input[type="number"] {
-        color: #334155 !important;
+        color: #334155 !important; /* GRIGIO SCURO */
         -webkit-text-fill-color: #334155 !important;
         caret-color: #334155 !important;
         font-weight: 600 !important;
@@ -67,16 +67,21 @@ st.markdown("""
         padding-left: 10px !important;
     }
     
-    /* 3. I BOTTONI +/- -> BIANCHI SU SFONDO BLU */
+    /* 3. I BOTTONI +/- -> SFONDO BLU, SIMBOLI BIANCHI */
     div[data-baseweb="input"] button {
         background-color: #1e3a8a !important; /* SFONDO BLU */
-        color: #ffffff !important; /* + e - BIANCHI */
+        color: #ffffff !important; /* SIMBOLI BIANCHI */
         border: none !important;
+        border-left: 1px solid rgba(255,255,255,0.2) !important; /* Separatore sottile */
         height: 100% !important;
-        width: 30px !important;
         margin: 0 !important;
-        border-radius: 0 !important; /* Squadrati per riempire il lato */
-        opacity: 1 !important;
+        flex-grow: 0;
+    }
+    
+    /* Simboli SVG dentro i bottoni */
+    div[data-baseweb="input"] button svg {
+        fill: white !important;
+        color: white !important;
     }
     
     div[data-baseweb="input"] button:hover {
@@ -92,10 +97,10 @@ st.markdown("""
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        color: #0f172a !important; /* Forza testo scuro nelle card */
+        color: #0f172a !important;
     }
     
-    /* --- BOTTONI --- */
+    /* --- BOTTONI APP --- */
     div.stButton > button:first-child { 
         background-color: var(--primary); 
         color: white !important; 
@@ -118,7 +123,7 @@ def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
         background-color: #1e3a8a; 
-        color: #ffffff !important; /* SCRITTA BIANCA FORZATA */
+        color: #ffffff !important; 
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
