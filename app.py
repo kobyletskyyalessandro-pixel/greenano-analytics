@@ -18,94 +18,94 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
-    /* FORZA TEMA CHIARO GLOBALE */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc;
-        color: #0f172a;
+    /* RESET TOTALE TEMA: FORZA COLORI CHIARI OVUNQUE */
+    .stApp {
+        background-color: #f8fafc !important;
+        color: #1e3a8a !important;
     }
     
-    html, body, .stApp { 
+    html, body { 
         font-family: 'Inter', sans-serif; 
-        background-color: var(--bg); 
-        color: var(--text); 
+        background-color: #f8fafc !important; 
+        color: #1e3a8a !important; 
     }
     
     /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 1px solid #e2e8f0;
+        border-right: 2px solid #e2e8f0;
     }
     
-    /* IMPORTANTE: Definisco il colore del testo STANDARD della sidebar (es. le etichette sopra i numeri) 
-       come BLU SCURO, ma NON tocco i div personalizzati (che gestirò a parte per farli bianchi).
-    */
-    section[data-testid="stSidebar"] .stMarkdown p,
-    section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important; /* Colore etichette standard */
-        font-weight: 700 !important;
+    /* TESTI GENERICI SIDEBAR -> BLU */
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div,
+    section[data-testid="stSidebar"] p {
+        color: #1e3a8a !important;
     }
     
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
-        color: #64748b !important;
+        color: #64748b !important; /* Unico grigio concesso per le descrizioni */
     }
     
-    /* --- INPUT BOXES (BIANCHE CON NUMERI BLU) --- */
+    /* --- INPUT BOXES (NUCLEAR FIX) --- */
     
-    /* 1. IL CONTENITORE (BOX) */
+    /* 1. IL CONTENITORE ESTERNO (BOX) */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important; /* SFONDO BIANCO */
+        background-color: #ffffff !important; /* BIANCO */
         border: 2px solid #1e3a8a !important; /* BORDO BLU */
         border-radius: 8px !important;
         padding: 0px !important;
     }
     
-    /* 2. IL TESTO (NUMERO) -> BLU SCURO */
-    input[type="number"] {
-        color: #1e3a8a !important; /* NUMERO BLU */
-        -webkit-text-fill-color: #1e3a8a !important;
+    /* 2. IL CAMPO DI TESTO INTERNO (Dove appare il numero) */
+    div[data-baseweb="input"] input {
+        background-color: #ffffff !important; /* BIANCO */
+        color: #1e3a8a !important; /* BLU */
+        -webkit-text-fill-color: #1e3a8a !important; /* FIX PER DARK MODE: FORZA BLU */
         caret-color: #1e3a8a !important;
         font-weight: 800 !important;
-        background-color: white !important;
         padding-left: 10px !important;
     }
-    
-    /* 3. I BOTTONI +/- -> SFONDO BLU, SIMBOLI BIANCHI */
+
+    /* 3. I PULSANTI +/- (SX e DX) */
     div[data-baseweb="input"] button {
         background-color: #1e3a8a !important; /* SFONDO BLU */
-        color: #ffffff !important; /* SIMBOLI BIANCHI */
         border: none !important;
         height: 100% !important;
-        width: 30px !important;
         margin: 0 !important;
+        width: 30px !important;
     }
     
+    /* 4. LE ICONE +/- DENTRO I PULSANTI */
     div[data-baseweb="input"] button svg {
-        fill: white !important;
-        color: white !important;
+        fill: #ffffff !important; /* BIANCO */
+        color: #ffffff !important; /* BIANCO */
     }
-
-    /* --- CLASSE SPECIALE PER TESTO BIANCO --- */
-    /* Questa classe forza il bianco su tutto ciò che sta dentro i miei box blu */
-    .white-text-forced, .white-text-forced span, .white-text-forced div {
-        color: #ffffff !important;
-    }
-
-    /* --- TITOLI --- */
-    h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 800; }
     
-    /* --- CARD --- */
+    /* Override specifico per quando ci passi sopra col mouse */
+    div[data-baseweb="input"] button:hover {
+        background-color: #2563eb !important;
+    }
+
+    /* --- FINE FIX INPUT --- */
+
+    /* TITOLI */
+    h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
+    
+    /* CARD */
     div[data-testid="stVerticalBlock"] > div { 
-        background-color: white; 
+        background-color: white !important; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
         box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1);
         color: #1e3a8a !important;
     }
     
-    /* --- BOTTONI APP --- */
+    /* BOTTONI APP */
     div.stButton > button:first-child { 
-        background-color: var(--primary); 
+        background-color: #1e3a8a !important; 
         color: white !important; 
         border-radius: 8px; 
         border: none; 
@@ -113,7 +113,7 @@ st.markdown("""
         font-weight: 700; 
     }
     div.stButton > button:hover { 
-        background-color: var(--secondary); 
+        background-color: #2563eb !important; 
         transform: translateY(-2px); 
     }
     
@@ -121,11 +121,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER PER HEADER BLU ---
-# Aggiunta classe css "white-text-forced" per garantire il bianco
+# --- HELPER PER HEADER BLU (Titolo Bianco su Sfondo Blu) ---
+# Uso style inline con !important per assicurarmi che il bianco vinca su tutto
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
-    <div class="white-text-forced" style="
+    <div style="
         background-color: #1e3a8a; 
         color: #ffffff !important; 
         padding: 10px 18px; 
@@ -135,8 +135,8 @@ def blue_pill_header(text, icon=""):
         font-size: 15px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span style="color: white !important;">{icon}</span> 
-        <span style="color: white !important;">{text}</span>
+        <span style="opacity:1; color: #ffffff !important;">{icon}</span> 
+        <span style="color: #ffffff !important;">{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -238,7 +238,7 @@ if df is not None:
         
         # Box riassuntivo (Blu con testo bianco FORZATO)
         st.markdown(f"""
-        <div class="white-text-forced" style="
+        <div style="
             background-color: #1e3a8a; 
             color: #ffffff !important; 
             padding: 10px; 
@@ -247,7 +247,7 @@ if df is not None:
             text-align: center;
             font-size: 14px;
             font-weight: 500;">
-            Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
+            <span style="color: #ffffff !important;">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
         </div>
         """, unsafe_allow_html=True)
         
