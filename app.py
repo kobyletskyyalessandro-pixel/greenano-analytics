@@ -18,79 +18,86 @@ st.markdown("""
         --text: #0f172a;       /* Dark Text */
     }
     
-    /* 1. FORZA SFONDO BIANCO SU TUTTA L'APP (Sovrascrive Dark Mode) */
-    .stApp {
-        background-color: #f8fafc !important;
-        color: #0f172a !important;
+    /* FORZA TEMA CHIARO GLOBALE */
+    [data-testid="stAppViewContainer"] {
+        background-color: #f8fafc;
+        color: #0f172a;
     }
     
-    /* 2. SIDEBAR BIANCA */
+    html, body, .stApp { 
+        font-family: 'Inter', sans-serif; 
+        background-color: var(--bg); 
+        color: var(--text); 
+    }
+    
+    /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* 3. TESTI SIDEBAR (Forza colore scuro anche in dark mode) */
-    section[data-testid="stSidebar"] .stMarkdown, 
-    section[data-testid="stSidebar"] h1,
-    section[data-testid="stSidebar"] h2,
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] p,
-    section[data-testid="stSidebar"] span {
-        color: #0f172a !important; /* BLU NOTTE SCURO */
+    /* Testi generici sidebar (Label sopra i numeri) -> BLU */
+    section[data-testid="stSidebar"] label {
+        color: #1e3a8a !important;
+        font-weight: 700 !important;
     }
-    section[data-testid="stSidebar"] small {
+    
+    section[data-testid="stSidebar"] p, small, .caption {
         color: #64748b !important;
     }
-
-    /* ============================================================ */
-    /* 4. FIX "SCATOLE NERE" -> FORZA BIANCO ASSOLUTO */
-    /* ============================================================ */
     
-    /* Il contenitore esterno dell'input */
+    /* --- INPUT BOXES --- */
+    
+    /* 1. IL CONTENITORE (BOX) -> BIANCO */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important; /* BIANCO */
-        border: 1px solid #94a3b8 !important; /* BORDO GRIGIO */
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
         border-radius: 8px !important;
-    }
-
-    /* Il campo dove scrivi i numeri */
-    input[type="number"] {
-        background-color: #ffffff !important; /* BIANCO */
-        color: #0f172a !important; /* NUMERO SCURO */
-        -webkit-text-fill-color: #0f172a !important; /* Fix per Safari/Chrome */
-        caret-color: #0f172a !important; /* Cursore scuro */
-    }
-
-    /* I bottoni +/- a destra */
-    div[data-baseweb="input"] button {
-        background-color: transparent !important;
-        color: #0f172a !important; /* Simboli scuri */
+        padding: 0px !important; /* Rimuovi padding per far toccare i bottoni ai lati */
+        overflow: hidden; /* Per i bordi arrotondati dei bottoni */
     }
     
-    /* Selettore specifico per Streamlit Dark Theme override */
-    div[data-testid="stNumberInput"] div[data-baseweb="input"] {
+    /* 2. IL TESTO (NUMERO) -> GRIGIO SCURO */
+    input[type="number"] {
+        color: #334155 !important;
+        -webkit-text-fill-color: #334155 !important;
+        caret-color: #334155 !important;
+        font-weight: 600 !important;
         background-color: white !important;
-        color: black !important;
+        padding-left: 10px !important;
     }
-    /* ============================================================ */
+    
+    /* 3. I BOTTONI +/- -> BIANCHI SU SFONDO BLU */
+    div[data-baseweb="input"] button {
+        background-color: #1e3a8a !important; /* SFONDO BLU */
+        color: #ffffff !important; /* + e - BIANCHI */
+        border: none !important;
+        height: 100% !important;
+        width: 30px !important;
+        margin: 0 !important;
+        border-radius: 0 !important; /* Squadrati per riempire il lato */
+        opacity: 1 !important;
+    }
+    
+    div[data-baseweb="input"] button:hover {
+        background-color: #2563eb !important; /* Blu più chiaro al passaggio */
+    }
 
-    /* TITOLI */
+    /* --- TITOLI --- */
     h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 700; }
     
-    /* CARD */
+    /* --- CARD --- */
     div[data-testid="stVerticalBlock"] > div { 
-        background-color: white !important; 
-        color: #0f172a !important;
+        background-color: white; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        color: #0f172a !important; /* Forza testo scuro nelle card */
     }
     
-    /* BOTTONI */
+    /* --- BOTTONI --- */
     div.stButton > button:first-child { 
-        background-color: var(--primary) !important; 
+        background-color: var(--primary); 
         color: white !important; 
         border-radius: 8px; 
         border: none; 
@@ -98,7 +105,7 @@ st.markdown("""
         font-weight: 600; 
     }
     div.stButton > button:hover { 
-        background-color: var(--secondary) !important; 
+        background-color: var(--secondary); 
         transform: translateY(-2px); 
     }
     
@@ -106,12 +113,12 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER PER HEADER BLU ---
+# --- HELPER PER HEADER BLU (Titolo Bianco su Sfondo Blu) ---
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
         background-color: #1e3a8a; 
-        color: white; 
+        color: #ffffff !important; /* SCRITTA BIANCA FORZATA */
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
@@ -119,7 +126,7 @@ def blue_pill_header(text, icon=""):
         font-size: 15px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span style="opacity:0.9">{icon}</span> <span>{text}</span>
+        <span style="opacity:1; color: white;">{icon}</span> <span style="color: white;">{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
