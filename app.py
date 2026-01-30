@@ -295,7 +295,7 @@ df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
 st.sidebar.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 is_valid = True
-
+w_ss = np.ones(10, dtype=float) / 10.0   # fallback (equal weights)
 with st.sidebar:
     st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
 
