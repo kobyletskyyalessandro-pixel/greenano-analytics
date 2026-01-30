@@ -380,11 +380,7 @@ if df is not None:
                         "Original_Index=%{customdata[0]}<extra></extra>"
                     ))
 
-                # Debug proxy info (collassabile)
-                with st.expander("Proxy debug (REE / NON_MINED / floors)"):
-                    info = df.attrs.get("proxy_info", {})
-                    st.write(info)
-                    st.write("Has element symbols:", df.attrs.get("has_elem_symbols", False))
+                
 
         with t3:
             opts = df[df["Status"] == "Optimal Choice"]["Material_Name"].unique() if "Material_Name" in df.columns else []
