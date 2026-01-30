@@ -270,7 +270,7 @@ df = load_and_sync_data()
 if df is None:
     st.error("Assicurati di avere 'AF_vectors.csv' e 'Materials Database 1.csv' nella cartella di lavoro.")
     st.stop()
-
+w_ss = np.ones(10, dtype=float) / 10.0
 
 
 # --- Compute SS from S1..S10 using user weights w_ss ---
@@ -297,10 +297,15 @@ manual_thresholds = {"P1": [], "P2": [], "P3": []}
 is_valid = True
 w_ss = np.ones(10, dtype=float) / 10.0   # fallback (equal weights)
 with st.sidebar:
+    st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
+
+    # =========================
+    # 1) PERFORMANCE TIERS
+    # =========================
     st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
 
     # P1 Temperature
-    sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2)
+    sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2, key="sf_P1")
     sc_t = generate_linear_scores(sf_t)
     for i in range(sf_t - 1):
         val = st.number_input(
@@ -316,7 +321,7 @@ with st.sidebar:
     # P2 Magnetization / P3 Coercivity
     for label, key, d_idx, d_val in [
         ("Magnetization (T)", "P2", 1, 0.4),
-        ("Coercivity (T)", "P3", 3, 0.4)
+        ("Coercivity (T)", "P3", 3, 0.4),
     ]:
         st.markdown(f"**{label}**")
         sf = st.selectbox(f"Subcategories ({key})", [2, 3, 4, 5], index=d_idx, key=f"sf_{key}")
@@ -329,16 +334,21 @@ with st.sidebar:
                 key=f"t_{key}_{i}"
             )
             manual_thresholds[key].append(float(v))
+
         if key == "P2":
             sf_m = sf
         else:
             sf_c = sf
 
+    # =========================
+    # 2) PERFORMANCE WEIGHTS
+    # =========================
     st.markdown('<div class="blue-section-header"><p>2. Performance Weights</p></div>', unsafe_allow_html=True)
-    w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
-    rem = round(1.0 - w_p1, 2)
-    w_p2 = st.slider("Weight P2 (Mag)", 0.0, rem, min(0.33, rem))
-    w_p3 = round(max(0.0, 1.0 - (w_p1 + w_p2)), 2)
+
+    w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33, key="w_p1")
+    rem = float(round(1.0 - w_p1, 2))
+    w_p2 = st.slider("Weight P2 (Mag)", 0.0, rem, min(0.33, rem), key="w_p2")
+    w_p3 = float(round(max(0.0, 1.0 - (w_p1 + w_p2)), 2))
 
     st.markdown(
         f"""
@@ -350,80 +360,65 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-
-
-
-
-    
+    # =========================
+    # 3) SCALABILITY VIEW
+    # =========================
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
-color_metric = st.selectbox(
-    "Coloring Metric",
-    ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
-    index=0
-)
 
-st.markdown('<div class="blue-section-header"><p>3B. Sustainability Weights</p></div>', unsafe_allow_html=True)
-st.caption("SS = Π S_i^(x_i) with Σx_i = 1. Weights are auto-normalized.")
-
-default_w = [0.1] * 10
-w_in = []
-for i in range(1, 11):
-    w_in.append(
-        st.number_input(
-            f"Weight x{i} for S{i}",
-            min_value=0.0,
-            max_value=1.0,
-            value=default_w[i-1],
-            step=0.01,
-            key=f"w_s{i}"   # IMPORTANT: key unico
-        )
+    color_metric = st.selectbox(
+        "Coloring Metric",
+        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        index=0,
+        key="color_metric"
     )
 
-w_sum = float(np.sum(w_in))
-if w_sum <= 0:
-    st.warning("All sustainability weights are 0. Using equal weights (0.1 each).")
-    w_ss = np.array([0.1] * 10, dtype=float)
-else:
-    w_ss = np.array(w_in, dtype=float) / w_sum
+    # =========================
+    # 3B) SUSTAINABILITY WEIGHTS
+    # =========================
+    st.markdown('<div class="blue-section-header"><p>3B. Sustainability Weights</p></div>', unsafe_allow_html=True)
+    st.caption("SS = Π S_i^(x_i) with Σx_i = 1. Weights are auto-normalized.")
 
-st.markdown(
-    f"""
-    <div class="custom-summary-box" style="padding:10px 12px; margin-top:10px;">
-        <p style="margin:0; font-size:14px;"><b>Σ weights</b>: {w_sum:.3f} → normalized to 1</p>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
+    default_w = [0.1] * 10
+    w_in = []
+    for i in range(1, 11):
+        w_in.append(
+            st.number_input(
+                f"Weight x{i} for S{i}",
+                min_value=0.0,
+                max_value=1.0,
+                value=default_w[i-1],
+                step=0.01,
+                key=f"w_s{i}"
+            )
+        )
 
+    w_sum = float(np.sum(w_in))
+    if w_sum <= 0:
+        st.warning("All sustainability weights are 0. Using equal weights (0.1 each).")
+        w_ss = np.ones(10, dtype=float) / 10.0
+    else:
+        w_ss = np.array(w_in, dtype=float) / w_sum
 
+    st.markdown(
+        f"""
+        <div class="custom-summary-box" style="padding:10px 12px; margin-top:10px;">
+            <p style="margin:0; font-size:14px;"><b>Σ weights</b>: {w_sum:.3f} → normalized to 1</p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
+    # =========================
+    # 4) TOP-RIGHT TREND
+    # =========================
+    st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
 
-
-
-
-
-# metriche richieste (se mancano colonne -> fallback + warning nel tab)
-color_metric = st.selectbox(
-"Coloring Metric",
-["SS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
-index=0
-)
-
-
-
-
-
-
-    
-st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
-    
-trend_metrics = st.multiselect(
-"Metrics to test vs H = log(Pmax)+log(Plong)",
-["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
-default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
-)
-
-
+    trend_metrics = st.multiselect(
+        "Metrics to test vs H = log(Pmax)+log(Plong)",
+        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        key="trend_metrics"
+    )
 
 
 
