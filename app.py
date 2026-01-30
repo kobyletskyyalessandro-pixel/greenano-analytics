@@ -35,29 +35,28 @@ st.markdown("""
         border-right: 1px solid #e2e8f0;
     }
     
-    /* 3. INPUT BOX & SELECTBOX (TIERS): STILE DEFAULT PULITO */
-    /* Sfondo bianco, bordo grigio, testo scuro */
+    /* 3. INPUT BOX & SELECTBOX: STILE DEFAULT PULITO (Bianco/Grigio) */
     div[data-baseweb="select"] > div,
     div[data-baseweb="input"] {
         background-color: #ffffff !important;
-        border: 1px solid #cbd5e1 !important; /* Grigio Default */
+        border: 1px solid #cbd5e1 !important; /* Bordo Grigio Chiaro */
         border-radius: 8px !important;
         color: #1e3a8a !important;
     }
     
     /* Testo dentro gli input */
     input[type="number"], div[data-baseweb="select"] span {
-        color: #1e3a8a !important; /* Blu scuro per leggibilità */
+        color: #1e3a8a !important; /* Blu scuro */
         -webkit-text-fill-color: #1e3a8a !important;
         caret-color: #1e3a8a !important;
         font-weight: 600 !important;
         background-color: transparent !important;
     }
     
-    /* Pulsanti dropdown e +/- */
+    /* Icone grigie */
     div[data-baseweb="select"] svg, 
     div[data-baseweb="input"] button {
-        color: #64748b !important; /* Grigio per le icone */
+        color: #64748b !important;
         fill: #64748b !important;
         background-color: transparent !important;
     }
@@ -188,10 +187,9 @@ st.markdown("""
 df = load_data()
 
 if df is not None:
-    # --- SIDEBAR ---
-    st.sidebar.header("Settings")
+    # --- SIDEBAR (NESSUN TITOLO "SETTINGS") ---
     
-    # 1. TIERS (Box Bianco con bordo Grigio)
+    # 1. TIERS
     blue_header("1. Performance Tiers")
     with st.sidebar:
         sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) 
@@ -199,7 +197,7 @@ if df is not None:
         sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3)
         st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
 
-    # 2. WEIGHTS (Slider Standard)
+    # 2. WEIGHTS
     blue_header("2. Coefficients")
     with st.sidebar:
         w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
