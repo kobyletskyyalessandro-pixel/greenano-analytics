@@ -280,7 +280,7 @@ if abs(w_sum - 1.0) > 1e-6:
     st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
     st.stop()
 
-w_ss = np.array(w_in, dtype=float)
+
 
 
 # --- Compute SS from S1..S10 using user weights w_ss ---
@@ -315,7 +315,7 @@ if abs(w_sum - 1.0) > 1e-6:
     st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
     st.stop()
 
-w_ss = np.array(w_in, dtype=float)   # fallback (equal weights)
+
 with st.sidebar:
     st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 
