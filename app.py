@@ -270,7 +270,17 @@ df = load_and_sync_data()
 if df is None:
     st.error("Assicurati di avere 'AF_vectors.csv' e 'Materials Database 1.csv' nella cartella di lavoro.")
     st.stop()
-w_ss = np.ones(10, dtype=float) / 10.0
+w_sum = float(np.sum(w_in))
+
+if w_sum <= 0:
+    st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
+    st.stop()
+
+if abs(w_sum - 1.0) > 1e-6:
+    st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
+    st.stop()
+
+w_ss = np.array(w_in, dtype=float)
 
 
 # --- Compute SS from S1..S10 using user weights w_ss ---
@@ -295,7 +305,17 @@ df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
 st.sidebar.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 is_valid = True
-w_ss = np.ones(10, dtype=float) / 10.0   # fallback (equal weights)
+w_sum = float(np.sum(w_in))
+
+if w_sum <= 0:
+    st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
+    st.stop()
+
+if abs(w_sum - 1.0) > 1e-6:
+    st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
+    st.stop()
+
+w_ss = np.array(w_in, dtype=float)   # fallback (equal weights)
 with st.sidebar:
     st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 
@@ -399,7 +419,22 @@ with st.sidebar:
             "❌ All sustainability weights are zero. "
             "Using equal weights xᵢ = 0.1 for all Sᵢ."
         )
-        w_ss = np.ones(10, dtype=float) / 10.0
+
+        
+        w_sum = float(np.sum(w_in))
+
+        if w_sum <= 0:
+            st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
+            st.stop()
+        
+        if abs(w_sum - 1.0) > 1e-6:
+            st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
+            st.stop()
+        
+        w_ss = np.array(w_in, dtype=float)
+
+
+
     
     elif abs(w_sum - 1.0) > 1e-6:
         st.warning(
