@@ -64,10 +64,18 @@ st.markdown("""
         border-radius: 8px;
         border: none;
     }
+    
+    /* SIDEBAR SETTINGS TITLE (Semplice testo) */
+    .sidebar-title {
+        font-size: 18px;
+        font-weight: 700;
+        color: #1e3a8a;
+        margin-bottom: 10px;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER (TITOLI BLU) ---
+# --- HELPER HEADER (TITOLI BLU NEI RIQUADRI) ---
 def blue_header(text):
     st.markdown(f"""
     <div style="
@@ -83,7 +91,9 @@ def blue_header(text):
     </div>
     """, unsafe_allow_html=True)
 
-# --- MOTORE DI CALCOLO ---
+# --- MOTORE DI CALCOLO (TIER SYSTEM & PRODUCT FORMULA) ---
+
+# Mappa dei punteggi (Score Map) come da Colab
 SF_SCORE_MAP = {
     2: [1.0, 0.5],
     3: [1.0, 0.6, 0.3],
@@ -92,29 +102,48 @@ SF_SCORE_MAP = {
 }
 
 def assign_tiered_scores(df, col_name, sf_value):
+    """
+    Assegna i punteggi (P_i) basandosi sulla divisione in quartili (Tiers).
+    """
     scores_list = SF_SCORE_MAP.get(sf_value, SF_SCORE_MAP[3])
+    # Ordina dal migliore al peggiore
     sorted_df = df.sort_values(by=col_name, ascending=False).copy()
     num_rows = len(sorted_df)
-    sorted_df['temp_score'] = scores_list[-1]
+    sorted_df['temp_score'] = scores_list[-1] # Default al più basso
     
+    # Assegna i punteggi per fasce
     for i in range(sf_value):
         cut_off_start = int(num_rows * i / sf_value)
         cut_off_end = int(num_rows * (i + 1) / sf_value)
+        
+        # Gestione ultimo blocco per includere eventuali resti
         if i < sf_value - 1:
             sorted_df.iloc[cut_off_start:cut_off_end, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
         else:
             sorted_df.iloc[cut_off_start:, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
+            
     return sorted_df['temp_score'].sort_index()
 
 def calculate_ops_tiered(df, tiers_config, weights):
+    """
+    Calcola OPS = P1^w1 * P2^w2 * P3^w3
+    """
+    # 1. Calcola i singoli punteggi di performance (P1, P2, P3) basati sui Tiers
     ps1 = assign_tiered_scores(df, 'P1', tiers_config['P1'])
     ps2 = assign_tiered_scores(df, 'P2', tiers_config['P2'])
     ps3 = assign_tiered_scores(df, 'P3', tiers_config['P3'])
     
+    # 2. Crea la matrice dei punteggi
     scores = np.column_stack((ps1, ps2, ps3))
+    # Clip per evitare log(0)
     scores = np.clip(scores, 1e-3, 1.0)
+    
+    # 3. Normalizza i pesi (devono sommare a 1)
     w = np.array(weights)
     if w.sum() > 0: w = w / w.sum()
+    
+    # 4. Calcola il prodotto pesato: exp( sum( w * log(scores) ) )
+    # Questo equivale matematicamente a: Score1^w1 * Score2^w2 * Score3^w3
     return np.exp(np.sum(w * np.log(scores), axis=1))
 
 def weighted_geometric_mean(S, w, eps=1e-12):
@@ -153,7 +182,7 @@ st.title("Materials Intelligence Platform")
 st.markdown("""
 <div style="padding: 15px; border-left: 5px solid #1e3a8a; background-color: white; margin-bottom: 25px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
     <h4 style="margin:0; color:#1e3a8a;">🚀 Calculation Engine</h4>
-    <p style="margin:0; color:#475569;">Configure Tiers and Weights to rank materials.</p>
+    <p style="margin:0; color:#475569;">Configure Tiers and Weights to rank materials using weighted performance scores.</p>
 </div>
 """, unsafe_allow_html=True)
 
@@ -161,7 +190,7 @@ df = load_data()
 
 if df is not None:
     # --- SIDEBAR ---
-    st.sidebar.header("Settings") # Titolo semplice senza riquadro
+    st.sidebar.markdown('<div class="sidebar-title">Settings</div>', unsafe_allow_html=True)
     
     # 1. TIERS
     with st.sidebar:
@@ -204,6 +233,7 @@ if df is not None:
         tiers_config = {'P1': sf_t, 'P2': sf_m, 'P3': sf_c}
         weights_perf = [w_p1, w_p2, w_p3]
         
+        # CALCOLO OPS CON FORMULA: P1^w1 * P2^w2 * P3^w3
         df['OPS'] = calculate_ops_tiered(df, tiers_config, weights_perf)
         
         s_cols = [f"S{i}" for i in range(1, 11)]
@@ -228,12 +258,13 @@ if df is not None:
                     color_discrete_map={'Optimal': '#1e3a8a', 'Standard': '#cbd5e1'},
                     opacity=0.9
                 )
-                fig.update_layout(template="plotly_white", xaxis_title="OPS (Performance)", yaxis_title="OSS (Sustainability)")
+                fig.update_layout(template="plotly_white", xaxis_title="OPS (Performance Score)", yaxis_title="OSS (Sustainability Score)")
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
                 st.markdown("**Top Materials**")
-                st.dataframe(df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS']], use_container_width=True, height=500)
+                # Mostriamo i dati calcolati
+                st.dataframe(df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS', 'P1', 'P2', 'P3']], use_container_width=True, height=500)
 
         with tab2:
             if 'Pmax_t_per_yr' in df.columns:
@@ -257,7 +288,9 @@ if df is not None:
                     ps2 = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
                     ps3 = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
                     
+                    # Simulazione OPS con variazione pesi
                     c_ops = np.exp(np.dot(W_ops, np.log([ps1, ps2, ps3] + np.array([1e-9]*3))))
+                    
                     W_oss = rng.dirichlet(np.ones(10)*20, 1000)
                     s_oss = df.loc[idx, s_cols].to_numpy(dtype=float)
                     c_oss = np.exp(np.dot(W_oss, np.log(s_oss+1e-9)))
