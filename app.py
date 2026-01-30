@@ -37,32 +37,65 @@ def clean_numeric(series):
 @st.cache_data
 def load_and_sync_data():
     try:
+        # Caricamento file originali
         df = pd.read_csv("AF_vectors.csv")
         db = pd.read_csv("Materials Database 1.csv")
+        
+        # Pulizia Database Elementare
         db = db.dropna(subset=['Z'])
         db['Z'] = db['Z'].astype(int)
         
-        def get_prop_vector(col_keyword):
+        # Mappatura Proprietà Elementari (Z -> Valore)
+        def get_prop_map(col_keyword):
             col_name = [c for c in db.columns if col_keyword.lower() in c.lower()][0]
-            return db.set_index('Z')[col_name].apply(lambda x: clean_numeric(pd.Series([x])).iloc[0]).reindex(range(1, 119)).fillna(0).values
+            return db.set_index('Z')[col_name].apply(lambda x: clean_numeric(pd.Series([x])).iloc[0]).to_dict()
 
-        v_prod = get_prop_vector('production')
-        v_res = get_prop_vector('reserve')
-        v_risk = get_prop_vector('risk')
-        v_hhi = get_prop_vector('HHI')
-        v_esg = get_prop_vector('ESG')
+        map_prod = get_prop_map('production')
+        map_res = get_prop_map('reserve')
+        map_risk = get_prop_map('risk')
+        map_hhi = get_prop_map('HHI')
+        map_esg = get_prop_map('ESG')
 
+        # Liste per il calcolo finale
         af_cols = [f'AF_{i}' for i in range(1, 119)]
         af_matrix = df[af_cols].fillna(0).values
+        
+        # Elementi non limitanti (H, C, N, O, F, Cl, gas nobili) - dal Notebook
+        NON_LIMITING = {1, 6, 7, 8, 9, 10, 17, 18, 36, 54}
+        BIG_VAL = 1e30
 
-        # Calcolo proprietà tramite prodotto vettoriale
-        df['Calc_Production'] = af_matrix @ v_prod
-        df['Calc_Reserves'] = af_matrix @ v_res
+        # --- CALCOLO WEAKEST LINK (Pmax e Rmax) ---
+        p_max_list, r_max_list = [], []
+        
+        for i in range(len(df)):
+            row_af = af_matrix[i]
+            pot_p, pot_r = [], []
+            
+            for z_idx, x_i in enumerate(row_af):
+                z = z_idx + 1 # Z parte da 1
+                if x_i > 0:
+                    if z in NON_LIMITING:
+                        continue
+                    # Potenziale = Offerta Mondiale / Frazione Atomica
+                    pot_p.append(map_prod.get(z, BIG_VAL) / (x_i + 1e-12))
+                    pot_r.append(map_res.get(z, BIG_VAL) / (x_i + 1e-12))
+            
+            p_max_list.append(min(pot_p) if pot_p else BIG_VAL)
+            r_max_list.append(min(pot_r) if pot_r else BIG_VAL)
+
+        df['Pmax_Bottleneck'] = p_max_list
+        df['Rmax_Bottleneck'] = r_max_list
+
+        # --- CALCOLO PRODOTTO VETTORIALE (Per indici di rischio) ---
+        v_risk = np.array([map_risk.get(z, 0) for z in range(1, 119)])
+        v_hhi = np.array([map_hhi.get(z, 0) for z in range(1, 119)])
+        v_esg = np.array([map_esg.get(z, 0) for z in range(1, 119)])
+
         df['Calc_Supply_Risk'] = af_matrix @ v_risk
         df['Calc_HHI'] = af_matrix @ v_hhi
         df['Calc_ESG'] = af_matrix @ v_esg
 
-        # Fallback per OSS se mancano S1-S10
+        # Sostenibilità (OSS) di fallback
         if not all(f'S{i}' in df.columns for i in range(1, 11)):
             def norm(s): return (s - s.min()) / (s.max() - s.min() + 1e-9)
             df['OSS'] = 1 - (norm(df['Calc_Supply_Risk']) + norm(df['Calc_HHI'])) / 2
@@ -72,7 +105,7 @@ def load_and_sync_data():
             
         return df
     except Exception as e:
-        st.error(f"Errore caricamento o sincronizzazione database: {e}")
+        st.error(f"Errore nella sincronizzazione dei dati: {e}")
         return None
 
 # --- 3. LOGICA CALCOLO RANKING ---
@@ -114,20 +147,17 @@ if df is not None:
             else: sf_c = sf
 
         # SEZIONE 2: SCALABILITY SETTINGS
-        st.markdown('<div class="blue-section-header"><p>2. Map Visual Settings</p></div>', unsafe_allow_html=True)
-        # Il filtro per escludere gli outlier aiuta a creare la "nuvola" invece della linea
-        outlier_percentile = st.slider("Exclude Top % Abundant (to see cloud)", 0, 10, 2)
+        st.markdown('<div class="blue-section-header"><p>2. Scalability Settings</p></div>', unsafe_allow_html=True)
+        outlier_percentile = st.slider("Exclude Top % Abundant (Cloud Zoom)", 0, 10, 2)
         color_metric = st.selectbox("Coloring Metric", ["OSS", "Calc_Supply_Risk", "Calc_HHI", "Calc_ESG"])
-        point_size_val = st.slider("Point Size", 3, 10, 5)
+        point_size_val = st.slider("Point Size", 2, 10, 4)
         point_opacity = st.slider("Point Opacity", 0.1, 1.0, 0.6)
 
-    # --- CALCOLI ---
+    # Calcoli Ranking
     p1_s = assign_tiered_scores(df, 'P1', sf_t, manual_thresholds['P1'])
     p2_s = assign_tiered_scores(df, 'P2', sf_m, manual_thresholds['P2'])
     p3_s = assign_tiered_scores(df, 'P3', sf_c, manual_thresholds['P3'])
-    
-    w_p1, w_p2, w_p3 = 0.33, 0.33, 0.34
-    df['OPS'] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
+    df['OPS'] = np.power(p1_s, 0.33) * np.power(p2_s, 0.33) * np.power(p3_s, 0.34)
     
     # --- TABS ---
     t1, t2, t3 = st.tabs(["🏆 Pareto Ranking", "🏭 Scalability Map", "🔬 Stability Analysis"])
@@ -150,35 +180,30 @@ if df is not None:
             st.dataframe(df[efficient].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS']], use_container_width=True, height=500)
 
     with t2:
-        st.markdown("### Resource Distribution Cloud (Linear Scale)")
-        st.caption("Lowering the 'Exclude Top %' slider in the sidebar will show the full scale, but may crush the 'cloud' into a line.")
+        st.markdown("### Max Production Capacity (Bottleneck Analysis)")
+        st.caption("Scalability is determined by the rarest element in the formula (Weakest Link logic).")
 
-        # FILTRO OUTLIER: se non tolgo i materiali con ferro/alluminio (10^9), i materiali critici (10^3) spariscono
-        cutoff_prod = np.percentile(df['Calc_Production'], 100 - outlier_percentile)
-        cutoff_res = np.percentile(df['Calc_Reserves'], 100 - outlier_percentile)
-        
-        df_plot = df[(df['Calc_Production'] <= cutoff_prod) & (df['Calc_Reserves'] <= cutoff_res)].copy()
+        # Filtro outlier per evitare lo schiacciamento
+        cutoff_p = np.percentile(df['Pmax_Bottleneck'], 100 - outlier_percentile)
+        cutoff_r = np.percentile(df['Rmax_Bottleneck'], 100 - outlier_percentile)
+        df_plot = df[(df['Pmax_Bottleneck'] <= cutoff_p) & (df['Rmax_Bottleneck'] <= cutoff_r)].copy()
         
         fig_sc = px.scatter(df_plot, 
-                            x='Calc_Reserves', 
-                            y='Calc_Production', 
+                            x='Rmax_Bottleneck', 
+                            y='Pmax_Bottleneck', 
                             color=color_metric, 
-                            hover_name='Material_Name', # NOME VISIBILE AL PUNTATORE
+                            hover_name='Material_Name',
                             hover_data={
                                 'Chemical_Formula': True,
-                                'Calc_Reserves': ':.2e',
-                                'Calc_Production': ':.2e',
+                                'Rmax_Bottleneck': ':.2e',
+                                'Pmax_Bottleneck': ':.2e',
                                 'Calc_Supply_Risk': ':.2f'
                             },
                             color_continuous_scale="Viridis",
-                            labels={'Calc_Reserves': 'Reserves (t)', 'Calc_Production': 'Production (t/yr)'})
+                            labels={'Rmax_Bottleneck': 'Global Reserves Capacity (t)', 'Pmax_Bottleneck': 'Annual Production Capacity (t/yr)'})
         
-        # PUNTI PICCOLI E TRASPARENTI PER EFFETTO NUVOLA
         fig_sc.update_traces(marker=dict(size=point_size_val, opacity=point_opacity, line=dict(width=0)))
-        fig_sc.update_layout(template="plotly_white", height=700, 
-                             xaxis=dict(showgrid=True, zeroline=True), 
-                             yaxis=dict(showgrid=True, zeroline=True))
-        
+        fig_sc.update_layout(template="plotly_white", height=700)
         st.plotly_chart(fig_sc, use_container_width=True)
 
     with t3:
