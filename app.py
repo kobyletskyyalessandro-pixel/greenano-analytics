@@ -444,13 +444,13 @@ with t2:
             ),
         ))
         text=df_nonan["Material_Name"] if "Material_Name" in df_nonan.columns else None,
-            hovertemplate=(
-                "%{text}<br>"
-                "Plong=%{x:.3g}<br>"
-                "Pmax=%{y:.3g}<br>"
-                f"{metric_col}=%{{marker.color}}<extra></extra>"
-            )
-        ))
+        hovertemplate=(
+            "%{text}<br>"
+            "Plong=%{x:.3g}<br>"
+            "Pmax=%{y:.3g}<br>"
+            f"{metric_col}=%{{marker.color}}<extra></extra>"
+        )
+    ))
 
     # punti con NaN (grigio + legenda)
     if len(df_nan) > 0:
