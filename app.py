@@ -457,8 +457,8 @@ with t2:
             y=df_nan["Pmax_t_per_yr"],
             mode="markers",
             colorbar=dict(
-            title=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (grey = NaN)",
-)
+            title=("Comp. (%)" if metric_col == "Companionality (%)" else metric_col) + " (grey = NaN)"
+            ),    
             marker=dict(
                 size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 10, 7),
                 color="lightgrey",
