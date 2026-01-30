@@ -4,140 +4,95 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. CONFIGURAZIONE & STILE ---
+# --- 1. CONFIGURAZIONE & STILE (CLEAN & SIMPLE) ---
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
 
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
-    :root { 
-        --primary: #1e3a8a;    /* Midnight Blue */
-        --secondary: #2563eb;  /* Royal Blue */
-        --bg: #f8fafc;         /* Light Background */
-        --text: #0f172a;       /* Dark Text */
-    }
+    /* COLORE PRINCIPALE: BLU NOTTE */
+    :root { --primary: #1e3a8a; }
     
-    /* RESET GLOBALE: APP BIANCA, TESTO BLU */
-    [data-testid="stAppViewContainer"] {
-        background-color: #f8fafc;
-        color: #1e3a8a;
-    }
-    html, body, .stApp { 
-        font-family: 'Inter', sans-serif; 
-        background-color: #f8fafc; 
-        color: #1e3a8a; 
-    }
-    
-    /* --- SIDEBAR: SFONDO BIANCO --- */
+    /* 1. SIDEBAR: SFONDO BIANCO */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 2px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
     }
     
-    /* TESTI SIDEBAR STANDARD -> BLU (Etichette, testi generici) */
-    section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important; 
-        font-weight: 700 !important;
-        font-size: 14px;
-    }
-    section[data-testid="stSidebar"] p, 
-    section[data-testid="stSidebar"] div,
-    section[data-testid="stSidebar"] span,
-    section[data-testid="stSidebar"] li {
-        color: #1e3a8a; /* Colore default blu, ma verrà sovrascritto dall'inline style nei box */
-    }
-    section[data-testid="stSidebar"] small, 
-    section[data-testid="stSidebar"] .caption {
-        color: #64748b !important;
-    }
-    
-    /* --- INPUT BOXES (BIANCO PURO, BORDO BLU, NUMERI BLU) --- */
+    /* 2. INPUT BOX (NUMERI): SFONDO BLU, SCRITTA BIANCA */
     div[data-baseweb="input"] {
-        background-color: #ffffff !important; 
-        border: 2px solid #1e3a8a !important; 
+        background-color: #1e3a8a !important; /* SFONDO BLU */
+        border: 1px solid #1e3a8a !important;
         border-radius: 8px !important;
-        padding: 0px !important;
+        color: white !important;
     }
-    div[data-baseweb="input"] input {
-        background-color: #ffffff !important; 
-        color: #1e3a8a !important; 
-        -webkit-text-fill-color: #1e3a8a !important;
-        caret-color: #1e3a8a !important;
-        font-weight: 800 !important;
-        padding-left: 10px !important;
+    
+    /* Il numero dentro la box */
+    input[type="number"] {
+        color: white !important;
+        -webkit-text-fill-color: white !important; /* Forza bianco su Chrome/Safari */
+        background-color: #1e3a8a !important;
+        font-weight: 700 !important;
     }
-    /* PULSANTI +/- */
+    
+    /* I pulsanti +/- */
     div[data-baseweb="input"] button {
-        background-color: #1e3a8a !important; 
-        border: none !important;
-        height: 100% !important;
-        margin: 0 !important;
-        width: 30px !important;
+        color: white !important;
+        background-color: #1e3a8a !important;
     }
-    div[data-baseweb="input"] button svg {
-        fill: #ffffff !important;
-        color: #ffffff !important;
-    }
-    div[data-baseweb="input"] button:hover {
-        background-color: #2563eb !important;
+    
+    /* Icone dentro i pulsanti +/- */
+    div[data-baseweb="input"] svg {
+        fill: white !important;
     }
 
-    /* TITOLI & CARD */
-    h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
-    div[data-testid="stVerticalBlock"] > div { 
-        background-color: white !important; 
-        border-radius: 12px; 
-        border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1);
+    /* 3. DROPDOWN (SELECTBOX): STILE SIMILE */
+    div[data-baseweb="select"] > div {
+        background-color: #1e3a8a !important;
+        color: white !important;
+        border-radius: 8px;
+    }
+    div[data-baseweb="select"] span {
+        color: white !important;
+    }
+    
+    /* 4. LABEL SIDEBAR (Es. "Tiers for P1") */
+    section[data-testid="stSidebar"] label {
         color: #1e3a8a !important;
+        font-weight: 700;
+        font-size: 14px;
     }
+
+    /* 5. TITOLI PRINCIPALI */
+    h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
     
-    /* BOTTONI */
-    div.stButton > button:first-child { 
-        background-color: #1e3a8a !important; 
-        color: white !important; 
-        border-radius: 8px; 
-        border: none; 
-        padding: 12px 24px; 
-        font-weight: 700; 
+    /* 6. BOTTONI GENERALI */
+    div.stButton > button {
+        background-color: #1e3a8a !important;
+        color: white !important;
+        border-radius: 8px;
+        border: none;
     }
-    div.stButton > button:hover { 
-        background-color: #2563eb !important; 
-        transform: translateY(-2px); 
-    }
-    
-    .block-container { padding-top: 1rem; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER BLU (CON STYLE INLINE DIRETTO) ---
-# Usiamo <p> con style diretto per forzare il bianco anche in Light Mode
-def blue_pill_header(text, icon=""):
+# --- HELPER HEADER (BOX BLU SEMPLICE) ---
+def blue_header(text):
     st.markdown(f"""
     <div style="
-        background-color: #1e3a8a ; 
-        padding: 10px 18px; 
+        background-color: #1e3a8a; 
+        color: white; 
+        padding: 12px; 
         border-radius: 8px; 
-        margin-bottom: 15px; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
-        <p style="
-            margin: 0; 
-            padding: 0; 
-            color: #ffffff !important; 
-            font-weight: 700; 
-            font-size: 15px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px;">
-            <span style="color: white !important;">{icon}</span> 
-            <span style="color: white !important;">{text}</span>
-        </p>
+        margin-bottom: 10px; 
+        font-weight: 700;
+        text-align: center;">
+        {text}
     </div>
     """, unsafe_allow_html=True)
 
 # --- MOTORE DI CALCOLO (TIER SYSTEM) ---
-
 SF_SCORE_MAP = {
     2: [1.0, 0.5],
     3: [1.0, 0.6, 0.3],
@@ -204,71 +159,47 @@ def load_data():
 
 st.title("Materials Intelligence Platform")
 
+# Intro box (Bianco con bordo blu)
 st.markdown("""
-<div style="
-    background-color: white; 
-    padding: 16px; 
-    border-left: 6px solid #1e3a8a; 
-    border-radius: 6px; 
-    box-shadow: 0 2px 8px rgba(30, 58, 138, 0.1); 
-    margin-bottom: 25px;">
-    <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🚀 Advanced Analytics Module</h4>
-    <p style="margin: 0; font-size: 15px; color: #1e3a8a;">
-        Configure <b>Subcategories (Tiers)</b> and <b>Coefficients</b> to rank materials using the scientific quantile scoring method.
-    </p>
+<div style="padding: 15px; border-left: 5px solid #1e3a8a; background-color: white; margin-bottom: 25px;">
+    <h4 style="margin:0; color:#1e3a8a;">🚀 Calculation Engine</h4>
+    <p style="margin:0; color:#1e3a8a;">Configure Tiers & Weights to generate the Pareto Analysis.</p>
 </div>
 """, unsafe_allow_html=True)
 
 df = load_data()
 
 if df is not None:
-    # --- SIDEBAR CONTROL PANEL ---
-    st.sidebar.header("Calculation Engine")
+    # --- SIDEBAR ---
+    st.sidebar.header("Settings")
     
-    # --- 1. SOGLIE (TIERS) ---
+    # 1. TIERS
+    blue_header("1. Performance Tiers")
     with st.sidebar:
-        blue_pill_header("1. Performance Tiers", "📊")
-        st.caption("Select number of subcategories (levels) for ranking.")
-        
         sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) 
         sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)
         sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3)
+        st.write("") # Spazio
 
-        st.markdown("<br>", unsafe_allow_html=True)
-
-    # --- 2. COEFFICIENTI (WEIGHTS) ---
+    # 2. WEIGHTS
+    blue_header("2. Coefficients")
     with st.sidebar:
-        blue_pill_header("2. Performance Coefficients", "⚖️")
-        st.caption("Set the importance weights (x, y, z).")
-        
-        w_p1 = st.slider("Coeff. P1 (Temp)", 0.0, 1.0, 0.33)
+        w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33)
         rem = 1.0 - w_p1
-        w_p2 = st.slider("Coeff. P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
+        w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riepilogo Visivo (CON STILE INLINE FORZATO)
+        # RIASSUNTO PESI (BOX BLU, SCRITTA BIANCA)
         st.markdown(f"""
-        <div style="
-            background-color: #1e3a8a; 
-            padding: 10px; 
-            border-radius: 8px; 
-            margin-top: 10px; 
-            text-align: center;">
-            <p style="
-                margin: 0; 
-                padding: 0; 
-                color: #ffffff !important; 
-                font-weight: 500; 
-                font-size: 14px;">
-                Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
-            </p>
+        <div style="background-color: #1e3a8a; color: white; padding: 10px; border-radius: 8px; text-align: center; margin-top: 10px;">
+            Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.info("🌍 Sustainability (OSS) is fixed by LCA data.")
+        st.info("Sustainability data is fixed.")
 
-    # --- MAIN CALCULATION ---
+    # --- CALCOLO ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
         tiers_config = {'P1': sf_t, 'P2': sf_m, 'P3': sf_c}
@@ -284,94 +215,59 @@ if df is not None:
             df['OSS'] = 0.5
 
         # --- TABS ---
-        tab1, tab2, tab3 = st.tabs(["🏆 Pareto Ranking", "🏭 Scalability Map", "🔬 Stability Analysis"])
+        tab1, tab2, tab3 = st.tabs(["🏆 Pareto Ranking", "🏭 Supply Chain", "🔬 Stability"])
 
-        # TAB 1: PARETO
         with tab1:
-            blue_pill_header("Live Pareto Frontier", "🏆")
-            
             colA, colB = st.columns([2, 1])
             with colA:
                 mask = pareto_front(df[['OPS', 'OSS']].to_numpy())
-                df['Status'] = np.where(mask, 'Optimal Choice', 'Sub-optimal')
+                df['Status'] = np.where(mask, 'Optimal', 'Standard')
                 
                 fig = px.scatter(
                     df, x='OPS', y='OSS', color='Status',
-                    hover_name='Material_Name', hover_data=['Chemical_Formula', 'P1', 'P2', 'P3'],
-                    color_discrete_map={'Optimal Choice': '#1e3a8a', 'Sub-optimal': '#cbd5e1'},
-                    opacity=0.9, size_max=15
+                    hover_name='Material_Name',
+                    color_discrete_map={'Optimal': '#1e3a8a', 'Standard': '#cbd5e1'},
+                    opacity=0.9
                 )
-                fig.update_traces(marker=dict(size=14, line=dict(width=1, color='white')))
-                fig.update_layout(
-                    template="plotly_white", 
-                    xaxis_title="OPS (Performance Score - Tiered)", 
-                    yaxis_title="OSS (Sustainability Score)",
-                    legend=dict(orientation="h", y=1.1)
-                )
+                fig.update_layout(template="plotly_white", xaxis_title="OPS (Tiered Score)", yaxis_title="OSS (Sustainability)")
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
                 st.markdown("**Top Materials**")
-                display_cols = ['Material_Name', 'OPS', 'OSS', 'P1', 'P2', 'P3']
-                st.dataframe(
-                    df[mask].sort_values(by="OPS", ascending=False)[display_cols], 
-                    use_container_width=True, height=500
-                )
+                st.dataframe(df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS', 'P1']], use_container_width=True, height=500)
 
-        # TAB 2: SUPPLY CHAIN
         with tab2:
-            blue_pill_header("Supply Chain Criticality", "🏭")
-            if 'Pmax_t_per_yr' in df.columns and 'Plong_t' in df.columns:
-                fig_scale = px.scatter(
-                    df, x='Plong_t', y='Pmax_t_per_yr', color='OSS',
-                    log_x=True, log_y=True, hover_name='Material_Name',
-                    color_continuous_scale="Viridis",
-                    labels={'Plong_t': 'Reserves (tons)', 'Pmax_t_per_yr': 'Production (t/yr)'}
-                )
+            if 'Pmax_t_per_yr' in df.columns:
+                fig_scale = px.scatter(df, x='Plong_t', y='Pmax_t_per_yr', color='OSS', log_x=True, log_y=True, hover_name='Material_Name', color_continuous_scale="Viridis")
                 fig_scale.update_layout(template="plotly_white")
                 st.plotly_chart(fig_scale, use_container_width=True)
             else:
-                st.warning("Missing Supply Data (Pmax/Plong).")
+                st.warning("No Supply Data")
 
-        # TAB 3: MONTE CARLO
         with tab3:
-            blue_pill_header("Robustness & Sensitivity", "🔬")
-            st.markdown("Test ranking stability against small weight variations.")
-            
-            optimal_materials = df[mask]['Material_Name'].unique()
-            if len(optimal_materials) > 0:
-                sel_mat = st.selectbox("Select Material:", optimal_materials)
-                
-                if st.button("Run Simulation ⚡"):
-                    idx = df[df['Material_Name'] == sel_mat].index[0]
-                    N = 1000
+            st.markdown("Select optimal material to test stability:")
+            opts = df[mask]['Material_Name'].unique()
+            if len(opts) > 0:
+                sel = st.selectbox("Material", opts)
+                if st.button("Simulate"):
+                    idx = df[df['Material_Name'] == sel].index[0]
                     rng = np.random.default_rng()
+                    W_ops = rng.dirichlet(np.array(weights_perf)*50+1, 1000)
                     
-                    alpha = np.array(weights_perf) * 50 + 1
-                    W_ops_sim = rng.dirichlet(alpha, N)
+                    # Recupero valori Tier
+                    ps1 = assign_tiered_scores(df, 'P1', sf_t).loc[idx]
+                    ps2 = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
+                    ps3 = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
                     
-                    ps1_val = assign_tiered_scores(df, 'P1', sf_t).loc[idx]
-                    ps2_val = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
-                    ps3_val = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
-                    s_vec = np.array([ps1_val, ps2_val, ps3_val])
-
-                    cloud_ops = np.exp(np.dot(W_ops_sim, np.log(s_vec + 1e-9)))
+                    c_ops = np.exp(np.dot(W_ops, np.log([ps1, ps2, ps3])))
+                    W_oss = rng.dirichlet(np.ones(10)*20, 1000)
+                    s_oss = df.loc[idx, s_cols].to_numpy(dtype=float)
+                    c_oss = np.exp(np.dot(W_oss, np.log(s_oss+1e-9)))
                     
-                    W_oss_sim = rng.dirichlet(np.ones(10) * 20, N)
-                    s_oss_vec = df.loc[idx, s_cols].to_numpy(dtype=float)
-                    s_oss_vec = np.clip(s_oss_vec, 1e-6, 1.0)
-                    cloud_oss = np.exp(np.dot(W_oss_sim, np.log(s_oss_vec)))
-
-                    fig_mc = px.scatter(x=cloud_ops, y=cloud_oss, opacity=0.3, color_discrete_sequence=['#2563eb'])
-                    fig_mc.add_trace(go.Scatter(x=[df.loc[idx,'OPS']], y=[df.loc[idx,'OSS']], mode='markers', 
-                                              marker=dict(color='#dc2626', size=15, symbol='star'), name='Your Selection'))
-                    fig_mc.update_layout(template="plotly_white", xaxis_title="OPS Stability", yaxis_title="OSS Stability")
+                    fig_mc = px.scatter(x=c_ops, y=c_oss, opacity=0.3, color_discrete_sequence=['#1e3a8a'])
                     st.plotly_chart(fig_mc, use_container_width=True)
-            else:
-                st.warning("No optimal materials found.")
 
     else:
-        st.error("Missing columns P1, P2, P3 in CSV.")
-
+        st.error("CSV Missing P1/P2/P3 columns")
 else:
-    st.warning("⚠️ Upload 'MF_sustainability_rank.csv' to GitHub.")
+    st.warning("Upload CSV")
