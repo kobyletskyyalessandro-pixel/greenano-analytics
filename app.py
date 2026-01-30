@@ -36,30 +36,21 @@ st.markdown("""
         border-right: 1px solid #e2e8f0;
     }
     
-    /* TESTI SIDEBAR -> BLU */
+    /* TESTI SIDEBAR STANDARD -> BLU */
     section[data-testid="stSidebar"] label {
         color: #1e3a8a !important; 
         font-weight: 700 !important;
         font-size: 14px;
     }
+    /* Questo colpisce il testo generico, ma NON quello con stile inline specifico */
     section[data-testid="stSidebar"] p, 
-    section[data-testid="stSidebar"] div,
-    section[data-testid="stSidebar"] span {
-        color: #1e3a8a !important;
+    section[data-testid="stSidebar"] li {
+        color: #1e3a8a;
     }
+    
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
         color: #64748b !important;
-    }
-    
-    /* --- HEADER BIANCHI (CLASSE SPECIALE) --- */
-    /* Questa classe vince su tutto per i titoli nei box blu */
-    .force-white {
-        color: #ffffff !important;
-        opacity: 1 !important;
-    }
-    .force-white span {
-        color: #ffffff !important;
     }
     
     /* --- INPUT BOXES (BIANCO PURO) --- */
@@ -125,7 +116,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER BLU ---
+# --- HELPER HEADER BLU (CON FORZATURA BIANCO) ---
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
@@ -137,14 +128,13 @@ def blue_pill_header(text, icon=""):
         font-size: 15px; 
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span class="force-white" style="font-size: 18px;">{icon}</span> 
-        <span class="force-white">{text}</span>
+        <span style="color: #ffffff !important; font-size: 18px;">{icon}</span> 
+        <span style="color: #ffffff !important;">{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
-# --- MOTORE DI CALCOLO (TIER SYSTEM DAL COLAB) ---
+# --- MOTORE DI CALCOLO (TIER SYSTEM) ---
 
-# Mappa dei punteggi basata sul numero di "Subcategories" (Tiers)
 SF_SCORE_MAP = {
     2: [1.0, 0.5],
     3: [1.0, 0.6, 0.3],
@@ -153,50 +143,29 @@ SF_SCORE_MAP = {
 }
 
 def assign_tiered_scores(df, col_name, sf_value):
-    """
-    Assegna punteggi basati sui quartili/livelli (Logic from Colab Cell 46).
-    """
-    # 1. Recupera la lista dei punteggi (es. [1, 0.75, 0.5, 0.25])
     scores_list = SF_SCORE_MAP.get(sf_value, SF_SCORE_MAP[3])
-    
-    # 2. Crea una copia ordinata del DF per quella colonna (P1, P2, o P3)
-    # NaN vengono messi in fondo e trattati come ultimo livello
     sorted_df = df.sort_values(by=col_name, ascending=False).copy()
-    
     num_rows = len(sorted_df)
-    # Inizializza con il punteggio più basso
     sorted_df['temp_score'] = scores_list[-1]
     
-    # 3. Assegna i punteggi per fasce (Tiers)
     for i in range(sf_value):
         cut_off_start = int(num_rows * i / sf_value)
         cut_off_end = int(num_rows * (i + 1) / sf_value)
-        
         if i < sf_value - 1:
             sorted_df.iloc[cut_off_start:cut_off_end, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
         else:
             sorted_df.iloc[cut_off_start:, sorted_df.columns.get_loc('temp_score')] = scores_list[i]
-            
-    # Restituisce una Serie con indici allineati al DF originale
     return sorted_df['temp_score'].sort_index()
 
 def calculate_ops_tiered(df, tiers_config, weights):
-    """
-    Calcola OPS usando il metodo dei Tiers (PS1^x * PS2^y * PS3^z).
-    """
-    # Calcola i punteggi parziali (PS1, PS2, PS3)
     ps1 = assign_tiered_scores(df, 'P1', tiers_config['P1'])
     ps2 = assign_tiered_scores(df, 'P2', tiers_config['P2'])
     ps3 = assign_tiered_scores(df, 'P3', tiers_config['P3'])
     
-    # Unisce in matrice
     scores = np.column_stack((ps1, ps2, ps3))
     scores = np.clip(scores, 1e-3, 1.0)
-    
-    # Calcola Media Geometrica Pesata
     w = np.array(weights)
     if w.sum() > 0: w = w / w.sum()
-    
     return np.exp(np.sum(w * np.log(scores), axis=1))
 
 def weighted_geometric_mean(S, w, eps=1e-12):
@@ -258,10 +227,9 @@ if df is not None:
         blue_pill_header("1. Performance Tiers", "📊")
         st.caption("Select number of subcategories (levels) for ranking.")
         
-        # Selectbox per i Tiers (2, 3, 4, 5) come nel Colab
-        sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) # Default 4
-        sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)  # Default 3
-        sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3) # Default 5
+        sf_t = st.selectbox("Tiers for P1 (Temp)", [2, 3, 4, 5], index=2) 
+        sf_m = st.selectbox("Tiers for P2 (Mag)", [2, 3, 4, 5], index=1)
+        sf_c = st.selectbox("Tiers for P3 (Coerc)", [2, 3, 4, 5], index=3)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
@@ -275,7 +243,7 @@ if df is not None:
         w_p2 = st.slider("Coeff. P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riepilogo Visivo (Sfondo Blu, testo Bianco Forzato)
+        # Riepilogo Visivo (CON FORZATURA BIANCO)
         st.markdown(f"""
         <div style="
             background-color: #1e3a8a; 
@@ -285,7 +253,7 @@ if df is not None:
             text-align: center;
             font-size: 14px;
             font-weight: 500;">
-            <span class="force-white">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
+            <span style="color: #ffffff !important; font-weight: bold;">Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}</span>
         </div>
         """, unsafe_allow_html=True)
         
@@ -295,14 +263,11 @@ if df is not None:
     # --- MAIN CALCULATION ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
-        # Configurazione Tiers
         tiers_config = {'P1': sf_t, 'P2': sf_m, 'P3': sf_c}
         weights_perf = [w_p1, w_p2, w_p3]
         
-        # Ricalcolo OPS usando la logica a livelli (Tiers)
         df['OPS'] = calculate_ops_tiered(df, tiers_config, weights_perf)
         
-        # OSS (Sustainability)
         s_cols = [f"S{i}" for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             S_mat = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
@@ -377,15 +342,6 @@ if df is not None:
                     alpha = np.array(weights_perf) * 50 + 1
                     W_ops_sim = rng.dirichlet(alpha, N)
                     
-                    # Calcola i punteggi base (PS1, PS2, PS3) per quel materiale
-                    # Usando la funzione assign_tiered_scores ma solo per il materiale selezionato è inefficiente
-                    # Meglio usare i valori già calcolati nelle colonne P1, P2, P3 ma dobbiamo rimapparli ai tiers
-                    # Per semplicità simuliamo variando direttamente l'OPS risultante o ricalcolando localmente
-                    
-                    # Recuperiamo i PS1, PS2, PS3 impliciti dai dati ricalcolati
-                    # (Qui facciamo una simulazione semplificata basata sui pesi)
-                    
-                    # Ricostruzione score vettoriale per la simulazione
                     ps1_val = assign_tiered_scores(df, 'P1', sf_t).loc[idx]
                     ps2_val = assign_tiered_scores(df, 'P2', sf_m).loc[idx]
                     ps3_val = assign_tiered_scores(df, 'P3', sf_c).loc[idx]
@@ -393,7 +349,6 @@ if df is not None:
 
                     cloud_ops = np.exp(np.dot(W_ops_sim, np.log(s_vec + 1e-9)))
                     
-                    # Per OSS usiamo simulazione standard
                     W_oss_sim = rng.dirichlet(np.ones(10) * 20, N)
                     s_oss_vec = df.loc[idx, s_cols].to_numpy(dtype=float)
                     s_oss_vec = np.clip(s_oss_vec, 1e-6, 1.0)
