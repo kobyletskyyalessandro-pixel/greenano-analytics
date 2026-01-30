@@ -341,12 +341,12 @@ index=0
 
 
     
-    st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
-    
-    trend_metrics = st.multiselect(
-        "Metrics to test vs H = log(Pmax)+log(Plong)",
-        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
-        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
+st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
+
+trend_metrics = st.multiselect(
+    "Metrics to test vs H = log(Pmax)+log(Plong)",
+    ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+    default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
 )
 
 
