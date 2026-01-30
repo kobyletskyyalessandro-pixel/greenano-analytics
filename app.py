@@ -245,21 +245,21 @@ def load_and_sync_data():
 
        # Do NOT compute SS here.
 # If S1..S10 are missing, we cannot compute SS later -> stop.
-if not all(f"S{i}" in df.columns for i in range(1, 11)):
-    raise ValueError("Missing S1..S10 columns in AF_vectors.csv. SS cannot be computed.")
-
-        for c in ["P1", "P2", "P3"]:
-            if c in df.columns:
-                df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
-
-        df.attrs["proxy_info"] = proxy_info
-        df.attrs["has_elem_symbols"] = bool(elem_symbols_by_Z)
-
-        return df
-
-    except Exception as e:
-        st.error(f"Errore caricamento o sincronizzazione database: {e}")
-        return None
+        if not all(f"S{i}" in df.columns for i in range(1, 11)):
+            raise ValueError("Missing S1..S10 columns in AF_vectors.csv. SS cannot be computed.")
+        
+                for c in ["P1", "P2", "P3"]:
+                    if c in df.columns:
+                        df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+        
+                df.attrs["proxy_info"] = proxy_info
+                df.attrs["has_elem_symbols"] = bool(elem_symbols_by_Z)
+        
+                return df
+        
+            except Exception as e:
+                st.error(f"Errore caricamento o sincronizzazione database: {e}")
+                return None
 
 # --- 3. MOTORE DI CALCOLO RANKING ---
 def generate_linear_scores(n_tiers):
