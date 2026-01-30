@@ -12,7 +12,7 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
     
     :root { 
-        --primary: #1e3a8a;    /* Midnight Blue */
+        --primary: #white;    /* Midnight Blue */
         --secondary: #2563eb;  /* Royal Blue */
         --bg: #f8fafc;         /* Light Background */
         --text: #0f172a;       /* Dark Text */
@@ -21,12 +21,12 @@ st.markdown("""
     /* RESET GLOBALE: APP BIANCA, TESTO BLU */
     [data-testid="stAppViewContainer"] {
         background-color: #f8fafc;
-        color: #1e3a8a;
+        color: #white;
     }
     html, body, .stApp { 
         font-family: 'Inter', sans-serif; 
         background-color: #f8fafc; 
-        color: #1e3a8a; 
+        color: #white; 
     }
     
     /* --- SIDEBAR: SFONDO BIANCO --- */
@@ -37,7 +37,7 @@ st.markdown("""
     
     /* TESTI SIDEBAR STANDARD -> BLU (Etichette, testi generici) */
     section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important; 
+        color: #white !important; 
         font-weight: 700 !important;
         font-size: 14px;
     }
@@ -45,7 +45,7 @@ st.markdown("""
     section[data-testid="stSidebar"] div,
     section[data-testid="stSidebar"] span,
     section[data-testid="stSidebar"] li {
-        color: #1e3a8a; /* Colore default blu, ma verrà sovrascritto dall'inline style nei box */
+        color: #white; /* Colore default blu, ma verrà sovrascritto dall'inline style nei box */
     }
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
@@ -55,21 +55,21 @@ st.markdown("""
     /* --- INPUT BOXES (BIANCO PURO, BORDO BLU, NUMERI BLU) --- */
     div[data-baseweb="input"] {
         background-color: #ffffff !important; 
-        border: 2px solid #1e3a8a !important; 
+        border: 2px solid #white !important; 
         border-radius: 8px !important;
         padding: 0px !important;
     }
     div[data-baseweb="input"] input {
         background-color: #ffffff !important; 
-        color: #1e3a8a !important; 
-        -webkit-text-fill-color: #1e3a8a !important;
-        caret-color: #1e3a8a !important;
+        color: #white !important; 
+        -webkit-text-fill-color: #white !important;
+        caret-color: #white !important;
         font-weight: 800 !important;
         padding-left: 10px !important;
     }
     /* PULSANTI +/- */
     div[data-baseweb="input"] button {
-        background-color: #1e3a8a !important; 
+        background-color: #white !important; 
         border: none !important;
         height: 100% !important;
         margin: 0 !important;
@@ -84,18 +84,18 @@ st.markdown("""
     }
 
     /* TITOLI & CARD */
-    h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
+    h1, h2, h3, h4 { color: #white !important; font-weight: 800; }
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white !important; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
         box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1);
-        color: #1e3a8a !important;
+        color: #white !important;
     }
     
     /* BOTTONI */
     div.stButton > button:first-child { 
-        background-color: #1e3a8a !important; 
+        background-color: #white !important; 
         color: white !important; 
         border-radius: 8px; 
         border: none; 
@@ -116,7 +116,7 @@ st.markdown("""
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
     <div style="
-        background-color: #1e3a8a; 
+        background-color: #white; 
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
@@ -208,12 +208,12 @@ st.markdown("""
 <div style="
     background-color: white; 
     padding: 16px; 
-    border-left: 6px solid #1e3a8a; 
+    border-left: 6px solid #white; 
     border-radius: 6px; 
     box-shadow: 0 2px 8px rgba(30, 58, 138, 0.1); 
     margin-bottom: 25px;">
-    <h4 style="color: #1e3a8a !important; margin: 0 0 5px 0;">🚀 Advanced Analytics Module</h4>
-    <p style="margin: 0; font-size: 15px; color: #1e3a8a;">
+    <h4 style="color: #white !important; margin: 0 0 5px 0;">🚀 Advanced Analytics Module</h4>
+    <p style="margin: 0; font-size: 15px; color: #white;">
         Configure <b>Subcategories (Tiers)</b> and <b>Coefficients</b> to rank materials using the scientific quantile scoring method.
     </p>
 </div>
@@ -249,7 +249,7 @@ if df is not None:
         # Riepilogo Visivo (CON STILE INLINE FORZATO)
         st.markdown(f"""
         <div style="
-            background-color: #1e3a8a; 
+            background-color: #white; 
             padding: 10px; 
             border-radius: 8px; 
             margin-top: 10px; 
@@ -298,7 +298,7 @@ if df is not None:
                 fig = px.scatter(
                     df, x='OPS', y='OSS', color='Status',
                     hover_name='Material_Name', hover_data=['Chemical_Formula', 'P1', 'P2', 'P3'],
-                    color_discrete_map={'Optimal Choice': '#1e3a8a', 'Sub-optimal': '#cbd5e1'},
+                    color_discrete_map={'Optimal Choice': '#white', 'Sub-optimal': '#cbd5e1'},
                     opacity=0.9, size_max=15
                 )
                 fig.update_traces(marker=dict(size=14, line=dict(width=1, color='white')))
