@@ -341,7 +341,7 @@ manual_thresholds = {"P1": [], "P2": [], "P3": []}
 
 
 with st.sidebar:
-    st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
+    
 
     # =========================
     # 1) PERFORMANCE TIERS
