@@ -21,7 +21,7 @@ st.markdown("""
     /* FORZA TEMA CHIARO GLOBALE */
     [data-testid="stAppViewContainer"] {
         background-color: #f8fafc;
-        color: #1e3a8a; /* Default Text BLUE */
+        color: #0f172a;
     }
     
     html, body, .stApp { 
@@ -33,30 +33,31 @@ st.markdown("""
     /* --- SIDEBAR: SFONDO BIANCO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff !important;
-        border-right: 2px solid #e2e8f0;
+        border-right: 1px solid #e2e8f0;
     }
     
-    /* Testi sidebar -> TUTTO BLU */
+    /* IMPORTANTE: Definisco il colore del testo STANDARD della sidebar (es. le etichette sopra i numeri) 
+       come BLU SCURO, ma NON tocco i div personalizzati (che gestirò a parte per farli bianchi).
+    */
+    section[data-testid="stSidebar"] .stMarkdown p,
     section[data-testid="stSidebar"] label {
-        color: #1e3a8a !important; /* Label Blu */
-        font-weight: 800 !important;
+        color: #1e3a8a !important; /* Colore etichette standard */
+        font-weight: 700 !important;
     }
     
-    section[data-testid="stSidebar"] p, 
-    section[data-testid="stSidebar"] span, 
-    section[data-testid="stSidebar"] div,
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
-        color: #1e3a8a !important; /* TUTTO BLU, NIENTE NERO/GRIGIO */
+        color: #64748b !important;
     }
     
-    /* --- INPUT BOXES (ONLY BLUE STYLE) --- */
+    /* --- INPUT BOXES (BIANCHE CON NUMERI BLU) --- */
     
     /* 1. IL CONTENITORE (BOX) */
     div[data-baseweb="input"] {
         background-color: #ffffff !important; /* SFONDO BIANCO */
-        border: 2px solid #1e3a8a !important; /* BORDO BLU SPAESSO */
+        border: 2px solid #1e3a8a !important; /* BORDO BLU */
         border-radius: 8px !important;
+        padding: 0px !important;
     }
     
     /* 2. IL TESTO (NUMERO) -> BLU SCURO */
@@ -64,15 +65,15 @@ st.markdown("""
         color: #1e3a8a !important; /* NUMERO BLU */
         -webkit-text-fill-color: #1e3a8a !important;
         caret-color: #1e3a8a !important;
-        font-weight: 800 !important; /* Molto grassetto */
+        font-weight: 800 !important;
         background-color: white !important;
         padding-left: 10px !important;
     }
     
-    /* 3. I BOTTONI +/- -> SFONDO BLU */
+    /* 3. I BOTTONI +/- -> SFONDO BLU, SIMBOLI BIANCHI */
     div[data-baseweb="input"] button {
-        background-color: #1e3a8a !important; /* Sfondo Blu */
-        color: #ffffff !important; /* Simbolo Bianco */
+        background-color: #1e3a8a !important; /* SFONDO BLU */
+        color: #ffffff !important; /* SIMBOLI BIANCHI */
         border: none !important;
         height: 100% !important;
         width: 30px !important;
@@ -84,6 +85,12 @@ st.markdown("""
         color: white !important;
     }
 
+    /* --- CLASSE SPECIALE PER TESTO BIANCO --- */
+    /* Questa classe forza il bianco su tutto ciò che sta dentro i miei box blu */
+    .white-text-forced, .white-text-forced span, .white-text-forced div {
+        color: #ffffff !important;
+    }
+
     /* --- TITOLI --- */
     h1, h2, h3, h4 { color: var(--primary) !important; font-weight: 800; }
     
@@ -92,7 +99,7 @@ st.markdown("""
         background-color: white; 
         border-radius: 12px; 
         border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1); /* Ombra Bluastra */
+        box-shadow: 0 4px 6px -1px rgba(30, 58, 138, 0.1);
         color: #1e3a8a !important;
     }
     
@@ -114,10 +121,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER PER HEADER BLU (Titolo Bianco su Sfondo Blu) ---
+# --- HELPER PER HEADER BLU ---
+# Aggiunta classe css "white-text-forced" per garantire il bianco
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
-    <div style="
+    <div class="white-text-forced" style="
         background-color: #1e3a8a; 
         color: #ffffff !important; 
         padding: 10px 18px; 
@@ -125,9 +133,10 @@ def blue_pill_header(text, icon=""):
         margin-bottom: 15px; 
         font-weight: 700; 
         font-size: 15px; 
-        box-shadow: 0 4px 6px rgba(30, 58, 138, 0.2);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
         display: flex; align-items: center; gap: 8px;">
-        <span style="opacity:1; color: white;">{icon}</span> <span style="color: white;">{text}</span>
+        <span style="color: white !important;">{icon}</span> 
+        <span style="color: white !important;">{text}</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -227,11 +236,11 @@ if df is not None:
         w_p2 = st.slider("Weight P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Box riassuntivo (Blu con testo bianco)
+        # Box riassuntivo (Blu con testo bianco FORZATO)
         st.markdown(f"""
-        <div style="
+        <div class="white-text-forced" style="
             background-color: #1e3a8a; 
-            color: white; 
+            color: #ffffff !important; 
             padding: 10px; 
             border-radius: 8px; 
             margin-top: 10px; 
