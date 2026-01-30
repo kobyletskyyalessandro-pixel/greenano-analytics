@@ -462,6 +462,22 @@ with st.sidebar:
     )
 
 
+    st.markdown('<div class="blue-section-header"><p>Soft Pareto (ε)</p></div>', unsafe_allow_html=True)
+
+    eps_ops = st.slider(
+        "ε on OPS (tolerance)",
+        0.0, 0.20, 0.05, 0.01,
+        help="0 = hard Pareto. 0.05 means 'allow 5% worse OPS' and still keep near-front points."
+    )
+
+    eps_ss = st.slider(
+        "ε on SS (tolerance)",
+        0.0, 0.20, 0.05, 0.01,
+        help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
+    )
+
+
+
 # --- Compute SS from S1..S10 using user weights w_ss ---
 S_cols = [f"S{i}" for i in range(1, 11)]
 missing_S = [c for c in S_cols if c not in df.columns]
@@ -502,6 +518,33 @@ with t1:
             efficient[i] = not np.any(np.all(pts >= c, axis=1) & np.any(pts > c, axis=1))
 
     df["Status"] = np.where(efficient, "Optimal Choice", "Standard")
+
+
+
+        # --- Soft Pareto: include points close to the hard Pareto front ---
+    pareto_front = df.loc[efficient, ["OPS", "SS"]].copy()
+
+    if len(pareto_front) > 0 and (eps_ops > 0 or eps_ss > 0):
+        soft = np.zeros(len(df), dtype=bool)
+
+        # For each point on the hard front, accept points not much worse (within eps)
+        for _, p in pareto_front.iterrows():
+            soft |= (
+                (df["OPS"] >= (1 - eps_ops) * float(p["OPS"])) &
+                (df["SS"]  >= (1 - eps_ss)  * float(p["SS"]))
+            )
+
+        efficient_soft = soft
+    else:
+        efficient_soft = efficient
+
+    df["Status"] = np.where(efficient_soft, "Optimal Choice", "Standard")
+
+
+    
+
+
+    
 
     with colA:
         fig = px.scatter(
