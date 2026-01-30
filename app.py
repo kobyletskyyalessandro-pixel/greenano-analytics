@@ -146,6 +146,45 @@ def load_and_sync_data():
     # --- carica file ---
     df = pd.read_csv("AF_vectors.csv")
     db = pd.read_csv("Materials Database 1.csv")
+    # --- bring S1..S10 from MF_sustainability_rank.csv (material-level file) ---
+    sus = pd.read_csv("MF_sustainability_rank.csv")
+    
+    # normalize column names (strip spaces)
+    sus.columns = [str(c).strip() for c in sus.columns]
+    df.columns  = [str(c).strip() for c in df.columns]
+    
+    # find S1..S10 columns robustly (accept exact "S1" or things that start with "S1")
+    S_cols = []
+    for i in range(1, 11):
+        target = f"S{i}"
+        if target in sus.columns:
+            S_cols.append(target)
+        else:
+            # fallback: first column whose name starts with "S{i}"
+            hits = [c for c in sus.columns if c.upper().startswith(target)]
+            if hits:
+                S_cols.append(hits[0])
+            else:
+                raise ValueError(f"MF_sustainability_rank.csv: cannot find a column for {target}.")
+    
+    # choose join key (prefer Original_Index)
+    join_key = None
+    if "Original_Index" in df.columns and "Original_Index" in sus.columns:
+        join_key = "Original_Index"
+    elif "Material_Name" in df.columns and "Material_Name" in sus.columns:
+        join_key = "Material_Name"
+    else:
+        raise ValueError("No common key to merge sustainability scores. Need Original_Index or Material_Name in BOTH files.")
+    
+    # keep only key + S columns
+    sus_small = sus[[join_key] + S_cols].copy()
+    
+    # merge
+    df = df.merge(sus_small, on=join_key, how="left")
+    
+    # rename the S columns to exactly S1..S10 (in case they were S1_something)
+    rename_map = {S_cols[i-1]: f"S{i}" for i in range(1, 11)}
+    df = df.rename(columns=rename_map)
 
     # --- pulizia DB elementare ---
     if "Z" not in db.columns:
