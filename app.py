@@ -349,11 +349,11 @@ if df is not None:
                 df_plot["Plong_t"] = pd.to_numeric(df_plot["Plong_t"], errors="coerce").clip(lower=1e-12)
 
                 fig_sc = px.scatter(
-                    df_plot,
-                    x="Plong_t",
-                    y="Pmax_t_per_yr",
-                    color="OSS",
-                    size=np.full(len(df_plot), 1),
+                df_plot,
+                x="Plong_t",
+                y="Pmax_t_per_yr",
+                color="OSS",
+                size=np.where(df_plot.get("Status", "Standard") == "Optimal Choice", 15, 8),
                     hover_name="Material_Name" if "Material_Name" in df_plot.columns else None,
                     log_x=True,
                     log_y=True,
