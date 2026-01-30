@@ -116,6 +116,39 @@ def load_and_sync_data():
         df = pd.read_csv("AF_vectors.csv")
         db = pd.read_csv("Materials Database 1.csv")
 
+
+
+
+
+
+
+                # ---- MERGE METRICHE DI SOSTENIBILITÀ DAL DB MATERIALI ----
+        sust_cols = ["HHI", "ESG", "Companionality"]
+        available = [c for c in sust_cols if c in db.columns]
+        
+        if "Material_Name" in db.columns and available:
+            df = df.merge(
+                db[["Material_Name"] + available],
+                on="Material_Name",
+                how="left"
+            )
+        else:
+            missing = set(sust_cols) - set(available)
+            if missing:
+                st.warning(f"Colonne sostenibilità mancanti nel Materials DB: {missing}")
+
+
+
+
+
+
+
+
+
+
+
+        
+
         if "Z" not in db.columns:
             raise ValueError("Nel database elementi manca la colonna 'Z' (1..118).")
         db = db.dropna(subset=["Z"]).copy()
