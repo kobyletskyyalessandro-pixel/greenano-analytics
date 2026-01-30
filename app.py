@@ -24,13 +24,27 @@ st.markdown("""
         color: var(--text); 
     }
     
-    /* Sidebar: Sfondo Bianco/Grigio Chiaro */
+    /* --- SIDEBAR: SFONDO BIANCO, TESTO SCURO --- */
     section[data-testid="stSidebar"] {
         background-color: #ffffff;
         border-right: 1px solid #e2e8f0;
     }
     
-    /* Card Bianche per i Grafici (Main Area) */
+    /* Forza il testo della sidebar a essere SCURO (leggibile su bianco) */
+    section[data-testid="stSidebar"] p, 
+    section[data-testid="stSidebar"] label, 
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] div {
+        color: #0f172a !important; 
+    }
+    
+    /* Titoli principali */
+    h1, h2, h3 { 
+        color: var(--primary) !important; 
+        font-weight: 700; 
+    }
+    
+    /* Card Bianche (Main Area) */
     div[data-testid="stVerticalBlock"] > div { 
         background-color: white; 
         border-radius: 12px; 
@@ -52,26 +66,32 @@ st.markdown("""
         background-color: var(--secondary); 
         transform: translateY(-2px); 
     }
+
+    /* Input Fields Style */
+    input[type="number"] {
+        color: #0f172a;
+    }
     
-    /* Rimuovi padding extra */
     .block-container { padding-top: 1rem; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER PER TITOLI STILIZZATI (RIQUADRI BLU) ---
-def blue_header(text, icon=""):
+# --- HELPER PER RIQUADRI BLU (TITOLI SEZIONI) ---
+def blue_header(text):
     st.markdown(f"""
     <div style="
         background-color: #1e3a8a; 
-        color: white; 
-        padding: 10px 15px; 
-        border-radius: 8px; 
-        margin-bottom: 15px; 
+        color: white !important; 
+        padding: 12px 15px; 
+        border-radius: 10px; 
+        margin-bottom: 10px; 
+        margin-top: 20px;
         font-weight: 700; 
-        font-size: 16px; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        display: flex; align-items: center; gap: 10px;">
-        <span>{icon}</span> {text}
+        font-size: 15px; 
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        text-align: center;
+        letter-spacing: 0.5px;">
+        {text}
     </div>
     """, unsafe_allow_html=True)
 
@@ -119,73 +139,79 @@ def load_data():
 
 # --- 4. INTERFACCIA UTENTE ---
 
-# HEADER PRINCIPALE
 st.title("Materials Intelligence Platform")
 
+# Intro Box (Bianco con bordo Blu)
 st.markdown("""
-<div style="background-color: white; padding: 15px; border-left: 5px solid #1e3a8a; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;">
-    <strong style="color: #1e3a8a;">Scientific Dashboard:</strong> 
-    Use the sidebar controls to customize performance thresholds. 
-    Sustainability scores are fixed based on LCA methodology.
+<div style="
+    background-color: white; 
+    padding: 15px; 
+    border-left: 6px solid #1e3a8a; 
+    border-radius: 4px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    margin-bottom: 25px;">
+    <strong style="color: #1e3a8a; font-size: 16px;">Scientific Dashboard</strong><br>
+    Customize the <b>Performance Thresholds</b> in the sidebar. 
+    Sustainability scores are scientifically fixed.
 </div>
 """, unsafe_allow_html=True)
 
 df = load_data()
 
 if df is not None:
-    # --- SIDEBAR (SFONDO BIANCO, HEADER BLU) ---
+    # --- SIDEBAR (SFONDO BIANCO) ---
     st.sidebar.header("User Controls")
     
-    # SEZIONE 1: SOGLIE
+    # SEZIONE 1: RIQUADRO BLU STONDATO
     with st.sidebar:
-        blue_header("1. Performance Thresholds", "🎯")
-        st.caption("Minimum values to achieve max score (1.0)")
+        blue_header("1. Performance Thresholds") # <-- Riquadro Blu Scuro
+        st.caption("Minimum values to get Max Score (1.0)")
         
         max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
         max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 1000.0
         max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 1000.0
         
+        # Input standard (Testo scuro su fondo chiaro grazie al CSS fixato)
         t_p1 = st.number_input(f"Target P1 (Magnetization)", value=max_p1*0.5, step=10.0)
         t_p2 = st.number_input(f"Target P2 (Anisotropy)", value=max_p2*0.5, step=0.1)
         t_p3 = st.number_input(f"Target P3 (Curie Temp)", value=max_p3*0.5, step=10.0)
         
-        st.divider()
-
-    # SEZIONE 2: PESI
+    # SEZIONE 2: RIQUADRO BLU STONDATO
     with st.sidebar:
-        blue_header("2. Importance Weights", "⚖️")
+        blue_header("2. Importance Weights") # <-- Riquadro Blu Scuro
         
         w_p1 = st.slider("Weight P1", 0.0, 1.0, 0.33)
         rem = 1.0 - w_p1
         w_p2 = st.slider("Weight P2", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # INFO BOX (BIANCO SU BLU)
+        # RIQUADRO PESI (BIANCO SU BLU PER CONTRASTO)
         st.markdown(f"""
         <div style="
             background-color: #1e3a8a; 
-            color: white; 
-            padding: 12px; 
+            color: white !important; 
+            padding: 10px; 
             border-radius: 8px; 
-            margin-top: 10px; 
+            margin-top: 15px; 
             text-align: center;
             font-weight: 600;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-            P1: {w_p1:.2f} &nbsp;|&nbsp; P2: {w_p2:.2f} &nbsp;|&nbsp; P3: {w_p3:.2f}
+            <div style="color: white !important;">P1: {w_p1:.2f} | P2: {w_p2:.2f} | P3: {w_p3:.2f}</div>
         </div>
         """, unsafe_allow_html=True)
         
         st.divider()
-        st.info("🌍 Sustainability (OSS) metrics are fixed.")
+        st.info("🌍 Sustainability metrics are fixed.")
 
     # --- CALCOLI ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
-        # OPS Custom & OSS Fixed
+        # OPS Custom
         thresholds = {'P1': t_p1, 'P2': t_p2, 'P3': t_p3}
         weights_perf = [w_p1, w_p2, w_p3]
         df['OPS'] = calculate_ops(df, thresholds, weights_perf)
         
+        # OSS Fixed
         s_cols = [f"S{i}" for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             S_mat = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
@@ -198,10 +224,9 @@ if df is not None:
 
         # TAB 1: RANKING
         with tab1:
-            blue_header("Custom Pareto Frontier", "🏆") # Titolo Sezione Blu
-            
             colA, colB = st.columns([2, 1])
             with colA:
+                st.subheader("Pareto Frontier")
                 mask = pareto_front(df[['OPS', 'OSS']].to_numpy())
                 df['Status'] = np.where(mask, 'Best Choice', 'Standard')
                 
@@ -212,16 +237,11 @@ if df is not None:
                     opacity=0.9
                 )
                 fig.update_traces(marker=dict(size=12, line=dict(width=1, color='white')))
-                fig.update_layout(
-                    template="plotly_white", 
-                    xaxis_title="OPS (Performance Score)", 
-                    yaxis_title="OSS (Sustainability Score)",
-                    legend=dict(orientation="h", y=1.1)
-                )
+                fig.update_layout(template="plotly_white", xaxis_title="OPS (Performance)", yaxis_title="OSS (Sustainability)")
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
-                st.markdown("**Top Materials List**")
+                st.subheader("Top Matches")
                 st.dataframe(
                     df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS', 'P1']], 
                     use_container_width=True, height=500
@@ -229,7 +249,7 @@ if df is not None:
 
         # TAB 2: SUPPLY CHAIN
         with tab2:
-            blue_header("Criticality Analysis", "🏭")
+            st.markdown("### Criticality Analysis")
             if 'Pmax_t_per_yr' in df.columns and 'Plong_t' in df.columns:
                 fig_scale = px.scatter(
                     df, x='Plong_t', y='Pmax_t_per_yr', color='OSS',
@@ -244,8 +264,8 @@ if df is not None:
 
         # TAB 3: MONTE CARLO
         with tab3:
-            blue_header("Robustness Check", "🔬")
-            st.markdown("Select a material to simulate how weight variations affect its position.")
+            st.subheader("Robustness Check")
+            st.markdown("Simulate ranking stability.")
             
             sel_mat = st.selectbox("Select Material:", df[mask]['Material_Name'].unique())
             
