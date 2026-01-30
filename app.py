@@ -417,11 +417,11 @@ p3_s = assign_tiered_scores(df, "P3", sf_c, manual_thresholds["P3"]) if "P3" in 
 
 df["OPS"] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
 
-t1, t2, t3, t4 = st.tabs([
+t1, t2, t4, t3 = st.tabs([
     "🏆 Pareto Ranking",
     "🏭 Scalability Map",
-    "🔬 Stability Analysis",
-    "📈 Top-right Trend"
+    "📈 Top-right Trend",
+    "🔬 Stability Analysis"
 ])
 
 with t1:
