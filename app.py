@@ -10,24 +10,102 @@ import os
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
 
 st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
-    :root { --primary: #1e3a8a; --bg: #f8fafc; }
-    [data-testid="stAppViewContainer"] { background-color: #f8fafc; color: #1e3a8a; }
-    html, body, .stApp { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    section[data-testid="stSidebar"] { background-color: #ffffff !important; border-right: 1px solid #e2e8f0; }
-    .settings-title { font-size: 20px; font-weight: 700; color: #1e3a8a; margin-bottom: 15px; }
-    .blue-section-header { background-color: #1e3a8a; padding: 10px 15px; border-radius: 8px; margin-top: 20px; margin-bottom: 10px; }
-    .blue-section-header p { color: #ffffff !important; margin: 0 !important; font-weight: 700 !important; font-size: 15px !important; }
-    div[data-baseweb="select"] > div, div[data-baseweb="input"], .custom-summary-box {
-        background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; border-radius: 8px !important;
-    }
-    input, span, .custom-summary-box p { color: #1e3a8a !important; font-weight: 600; }
-    div[data-baseweb="input"] button { background-color: #f1f5f9 !important; color: #1e3a8a !important; }
-    section[data-testid="stSidebar"] label { color: #1e3a8a !important; font-weight: 700; }
-    div[data-testid="stVerticalBlock"] > div { background-color: white !important; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+:root { --primary: #1e3a8a; --bg: #f8fafc; }
+
+[data-testid="stAppViewContainer"] {
+  background-color: #f8fafc;
+  color: #1e3a8a;
+}
+
+html, body, .stApp {
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+}
+
+section[data-testid="stSidebar"] {
+  background-color: #ffffff !important;
+  border-right: 1px solid #e2e8f0;
+}
+
+.settings-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e3a8a;
+  margin-bottom: 15px;
+}
+
+.blue-section-header {
+  background-color: #1e3a8a;
+  padding: 10px 15px;
+  border-radius: 8px;
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+.blue-section-header p {
+  color: #ffffff !important;
+  margin: 0 !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+}
+
+div[data-baseweb="select"] > div,
+div[data-baseweb="input"],
+.custom-summary-box {
+  background-color: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+}
+
+input, span, .custom-summary-box p {
+  color: #1e3a8a !important;
+  font-weight: 600;
+}
+
+div[data-baseweb="input"] button {
+  background-color: #f1f5f9 !important;
+  color: #1e3a8a !important;
+}
+
+section[data-testid="stSidebar"] label {
+  color: #1e3a8a !important;
+  font-weight: 700;
+}
+
+/* main area cards */
+div[data-testid="stVerticalBlock"] > div {
+  background-color: white !important;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* --- Sidebar header: Settings + Guide --- */
+.sidebar-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.sidebar-title{
+  font-size:20px;
+  font-weight:700;
+  color:#1e3a8a;
+}
+
+/* IMPORTANT: disable card styling INSIDE sidebar only */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 # ============================================================
 # PROXY SETTINGS (come il tuo script)
@@ -346,24 +424,34 @@ with st.sidebar:
     # =========================
     # 1) PERFORMANCE TIERS
     # =========================
-    col_set, col_guide = st.columns([3, 1])
-    
-    with col_set:
-        st.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
-    
-    with col_guide:
-        GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
-        if os.path.exists(GUIDE_PATH):
-            with open(GUIDE_PATH, "rb") as f:
-                st.download_button(
-                    label="📘",
-                    data=f,
-                    file_name="GreenNanoAnalyticsGuide.pdf",
-                    mime="application/pdf",
-                    help="Download User Guide",
-                )
-        else:
-            st.write("")  # niente se manca
+   
+    # header row (Settings + Guide button aligned right)
+    st.markdown(
+        """
+        <div class="sidebar-header">
+          <div class="sidebar-title">Settings</div>
+          <div class="sidebar-guide">
+        """,
+        unsafe_allow_html=True
+    )
+
+    GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
+    if os.path.exists(GUIDE_PATH):
+        with open(GUIDE_PATH, "rb") as f:
+            st.download_button(
+                label="📘",
+                data=f,
+                file_name="GreenNanoAnalyticsGuide.pdf",
+                mime="application/pdf",
+                help="Download User Guide",
+                key="download_guide_top",
+            )
+    else:
+        st.write("")
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
+    # ...poi continua con le tue sezioni: Performance tiers, ecc.
 
     # P1 Temperature
     sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2, key="sf_P1")
