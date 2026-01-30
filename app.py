@@ -143,15 +143,51 @@ def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dic
 
 @st.cache_data
 def load_and_sync_data():
-
     # --- carica file ---
     df = pd.read_csv("AF_vectors.csv")
     db = pd.read_csv("Materials Database 1.csv")
 
-    # --- pulizia / setup ---
-    ...
+    # --- pulizia DB elementare ---
+    if "Z" not in db.columns:
+        raise ValueError("Nel database elementi manca la colonna 'Z' (1..118).")
 
-    # --- optional element-derived metrics ---
+    db = db.dropna(subset=["Z"]).copy()
+    db["Z"] = pd.to_numeric(db["Z"], errors="coerce")
+    db = db.dropna(subset=["Z"]).copy()
+    db["Z"] = db["Z"].astype(int)
+
+    # --- estrazione simboli elementi (per proxy NON_MINED/REE) ---
+    elem_col = None
+    for c in db.columns:
+        if "element" in str(c).lower():   # prende "Elements " o simili
+            elem_col = c
+            break
+
+    elem_symbols_by_Z = None
+    if elem_col is not None:
+        tmp = db[["Z", elem_col]].dropna()
+        elem_symbols_by_Z = {int(z): str(sym).strip() for z, sym in zip(tmp["Z"], tmp[elem_col])}
+
+    # --- vettori proprietà: production + reserve (NaN se manca) ---
+    v_prod_raw = _build_prop_vector(db, "production")
+    v_res_raw  = _build_prop_vector(db, "reserve")
+
+    # --- proxy fill (come tuo script) ---
+    v_prod, v_res, proxy_info = _apply_proxies(v_prod_raw, v_res_raw, elem_symbols_by_Z)
+
+    # --- build AF matrix (Materials x 118 elements) ---
+    af_cols = [f"AF_{i}" for i in range(1, 119)]
+    missing_af = [c for c in af_cols if c not in df.columns]
+    if missing_af:
+        raise ValueError(f"Mancano colonne AF nel file AF_vectors.csv (esempi): {missing_af[:5]}")
+
+    af_matrix = df[af_cols].fillna(0.0).to_numpy(dtype=float)
+
+    # --- weakest-link metrics (Pmax, Plong) ---
+    df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
+    df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
+
+    # --- opzionale: metriche da DB (se esistono) ---
     try:
         v_hhi  = _build_prop_vector(db, "HHI")
         v_esg  = _build_prop_vector(db, "ESG")
@@ -162,18 +198,17 @@ def load_and_sync_data():
         df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
         df["Supply risk"] = _weighted_avg_with_nan_propagation(af_matrix, v_sr)
         df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
-
     except Exception:
         pass
 
-    # --- weakest-link metrics ---
-    df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
-    df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
-
-    # --- cleanup ---
+    # --- cleanup numerico ---
     for c in ["P1", "P2", "P3"]:
         if c in df.columns:
             df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+
+    # debug attrs
+    df.attrs["proxy_info"] = proxy_info
+    df.attrs["has_elem_symbols"] = bool(elem_symbols_by_Z)
 
     return df
         
