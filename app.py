@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
-# --- 1. CONFIGURAZIONE & STILE (FULL BRANDING) ---
+# --- 1. CONFIGURAZIONE & STILE ---
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
 
 st.markdown("""
@@ -24,49 +24,11 @@ st.markdown("""
         color: var(--text); 
     }
     
-    h1, h2, h3 { 
-        color: var(--primary) !important; 
-        font-weight: 700; 
-    }
-    
-    /* --- SIDEBAR STYLING (BIANCO SU BLU) --- */
+    /* Sidebar: Sfondo Bianco/Grigio Chiaro */
     section[data-testid="stSidebar"] {
-        background-color: var(--primary); /* Sfondo Blu Notte */
-        color: white;
+        background-color: #ffffff;
+        border-right: 1px solid #e2e8f0;
     }
-    
-    /* Titoli nella Sidebar */
-    section[data-testid="stSidebar"] h1, 
-    section[data-testid="stSidebar"] h2, 
-    section[data-testid="stSidebar"] h3,
-    section[data-testid="stSidebar"] h4 {
-        color: white !important;
-    }
-    
-    /* Testo Labels e Caption nella Sidebar */
-    section[data-testid="stSidebar"] label,
-    section[data-testid="stSidebar"] .stMarkdown p,
-    section[data-testid="stSidebar"] .stMarkdown small {
-        color: #e2e8f0 !important; /* Bianco sporco per leggibilità */
-    }
-    
-    /* Input Box nella Sidebar (Effetto Glass/Stondato) */
-    section[data-testid="stSidebar"] div[data-baseweb="input"] {
-        background-color: rgba(255, 255, 255, 0.1);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: 8px;
-        color: white;
-    }
-    section[data-testid="stSidebar"] input {
-        color: white;
-    }
-    
-    /* Separatori nella sidebar */
-    section[data-testid="stSidebar"] hr {
-        border-color: rgba(255, 255, 255, 0.2);
-    }
-
-    /* --- FINE SIDEBAR --- */
     
     /* Card Bianche per i Grafici (Main Area) */
     div[data-testid="stVerticalBlock"] > div { 
@@ -74,12 +36,12 @@ st.markdown("""
         border-radius: 12px; 
         padding: 20px; 
         border: 1px solid #e2e8f0; 
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     
     /* Bottoni */
     div.stButton > button:first-child { 
-        background-color: var(--secondary); 
+        background-color: var(--primary); 
         color: white !important; 
         border-radius: 8px; 
         border: none; 
@@ -87,13 +49,30 @@ st.markdown("""
         font-weight: 600; 
     }
     div.stButton > button:hover { 
-        background-color: white; 
-        color: var(--primary) !important;
-        border: 1px solid var(--primary);
+        background-color: var(--secondary); 
+        transform: translateY(-2px); 
     }
     
-    .block-container { padding-top: 2rem; }
+    /* Rimuovi padding extra */
+    .block-container { padding-top: 1rem; }
     </style>
+    """, unsafe_allow_html=True)
+
+# --- HELPER PER TITOLI STILIZZATI (RIQUADRI BLU) ---
+def blue_header(text, icon=""):
+    st.markdown(f"""
+    <div style="
+        background-color: #1e3a8a; 
+        color: white; 
+        padding: 10px 15px; 
+        border-radius: 8px; 
+        margin-bottom: 15px; 
+        font-weight: 700; 
+        font-size: 16px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        display: flex; align-items: center; gap: 10px;">
+        <span>{icon}</span> {text}
+    </div>
     """, unsafe_allow_html=True)
 
 # --- 2. MOTORE DI CALCOLO ---
@@ -102,7 +81,6 @@ def calculate_ops(df, thresholds, weights):
     s1 = np.where(df['P1'] >= thresholds['P1'], 1.0, df['P1'] / (thresholds['P1'] + 1e-9))
     s2 = np.where(df['P2'] >= thresholds['P2'], 1.0, df['P2'] / (thresholds['P2'] + 1e-9))
     s3 = np.where(df['P3'] >= thresholds['P3'], 1.0, df['P3'] / (thresholds['P3'] + 1e-9))
-    
     scores = np.column_stack((s1, s2, s3))
     scores = np.clip(scores, 1e-6, 1.0)
     w = np.array(weights)
@@ -141,72 +119,73 @@ def load_data():
 
 # --- 4. INTERFACCIA UTENTE ---
 
-# HEADER
+# HEADER PRINCIPALE
 st.title("Materials Intelligence Platform")
+
 st.markdown("""
-<div style="background-color: white; padding: 15px; border-left: 5px solid #1e3a8a; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+<div style="background-color: white; padding: 15px; border-left: 5px solid #1e3a8a; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px;">
     <strong style="color: #1e3a8a;">Scientific Dashboard:</strong> 
-    Customize thresholds in the blue sidebar to calculate your OPS (Performance Score). 
-    Sustainability (OSS) is fixed.
+    Use the sidebar controls to customize performance thresholds. 
+    Sustainability scores are fixed based on LCA methodology.
 </div>
 """, unsafe_allow_html=True)
 
 df = load_data()
 
 if df is not None:
-    # --- SIDEBAR (ORA BLU CON TESTO BIANCO) ---
-    st.sidebar.header("🎛️ User Controls")
+    # --- SIDEBAR (SFONDO BIANCO, HEADER BLU) ---
+    st.sidebar.header("User Controls")
     
-    # 1. Performance SOGLIE
-    st.sidebar.subheader("1. Thresholds")
-    st.sidebar.caption("Minimum values to achieve max score (1.0)")
-    
-    max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
-    max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 1000.0
-    max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 1000.0
-    
-    t_p1 = st.sidebar.number_input(f"Target P1 (Magnetization)", value=max_p1*0.5, step=10.0)
-    t_p2 = st.sidebar.number_input(f"Target P2 (Anisotropy)", value=max_p2*0.5, step=0.1)
-    t_p3 = st.sidebar.number_input(f"Target P3 (Curie Temp)", value=max_p3*0.5, step=10.0)
+    # SEZIONE 1: SOGLIE
+    with st.sidebar:
+        blue_header("1. Performance Thresholds", "🎯")
+        st.caption("Minimum values to achieve max score (1.0)")
+        
+        max_p1 = float(df['P1'].max()) if 'P1' in df.columns else 1000.0
+        max_p2 = float(df['P2'].max()) if 'P2' in df.columns else 1000.0
+        max_p3 = float(df['P3'].max()) if 'P3' in df.columns else 1000.0
+        
+        t_p1 = st.number_input(f"Target P1 (Magnetization)", value=max_p1*0.5, step=10.0)
+        t_p2 = st.number_input(f"Target P2 (Anisotropy)", value=max_p2*0.5, step=0.1)
+        t_p3 = st.number_input(f"Target P3 (Curie Temp)", value=max_p3*0.5, step=10.0)
+        
+        st.divider()
 
-    st.sidebar.markdown("---")
-
-    # 2. Performance PESI
-    st.sidebar.subheader("2. Weights")
-    st.sidebar.caption("Relative importance of each property")
-    
-    w_p1 = st.sidebar.slider("Importance P1", 0.0, 1.0, 0.33)
-    rem = 1.0 - w_p1
-    w_p2 = st.sidebar.slider("Importance P2", 0.0, max(0.0, rem), min(0.33, rem))
-    w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
-    
-    # Box informativo 'pillola' all'interno della sidebar blu
-    st.sidebar.markdown(f"""
-    <div style="
-        background-color: rgba(255,255,255,0.1); 
-        border: 1px solid rgba(255,255,255,0.3); 
-        border-radius: 12px; 
-        padding: 10px; 
-        margin-top: 10px; 
-        text-align: center;">
-        <span style="font-size: 14px; font-weight: 600; color: white;">
-           P1: {w_p1:.2f} &nbsp;|&nbsp; P2: {w_p2:.2f} &nbsp;|&nbsp; P3: {w_p3:.2f}
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.sidebar.markdown("---")
-    st.sidebar.info("🌍 OSS (Sustainability) weights are fixed by scientific consensus.")
+    # SEZIONE 2: PESI
+    with st.sidebar:
+        blue_header("2. Importance Weights", "⚖️")
+        
+        w_p1 = st.slider("Weight P1", 0.0, 1.0, 0.33)
+        rem = 1.0 - w_p1
+        w_p2 = st.slider("Weight P2", 0.0, max(0.0, rem), min(0.33, rem))
+        w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
+        
+        # INFO BOX (BIANCO SU BLU)
+        st.markdown(f"""
+        <div style="
+            background-color: #1e3a8a; 
+            color: white; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin-top: 10px; 
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+            P1: {w_p1:.2f} &nbsp;|&nbsp; P2: {w_p2:.2f} &nbsp;|&nbsp; P3: {w_p3:.2f}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        st.divider()
+        st.info("🌍 Sustainability (OSS) metrics are fixed.")
 
     # --- CALCOLI ---
     if all(c in df.columns for c in ['P1', 'P2', 'P3']):
         
-        # OPS Custom
+        # OPS Custom & OSS Fixed
         thresholds = {'P1': t_p1, 'P2': t_p2, 'P3': t_p3}
         weights_perf = [w_p1, w_p2, w_p3]
         df['OPS'] = calculate_ops(df, thresholds, weights_perf)
         
-        # OSS Fixed
         s_cols = [f"S{i}" for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             S_mat = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
@@ -219,9 +198,10 @@ if df is not None:
 
         # TAB 1: RANKING
         with tab1:
+            blue_header("Custom Pareto Frontier", "🏆") # Titolo Sezione Blu
+            
             colA, colB = st.columns([2, 1])
             with colA:
-                st.subheader("Pareto Frontier")
                 mask = pareto_front(df[['OPS', 'OSS']].to_numpy())
                 df['Status'] = np.where(mask, 'Best Choice', 'Standard')
                 
@@ -234,14 +214,14 @@ if df is not None:
                 fig.update_traces(marker=dict(size=12, line=dict(width=1, color='white')))
                 fig.update_layout(
                     template="plotly_white", 
-                    xaxis_title="OPS (Your Score)", 
-                    yaxis_title="OSS (Sustainability)",
+                    xaxis_title="OPS (Performance Score)", 
+                    yaxis_title="OSS (Sustainability Score)",
                     legend=dict(orientation="h", y=1.1)
                 )
                 st.plotly_chart(fig, use_container_width=True)
             
             with colB:
-                st.subheader("Top Matches")
+                st.markdown("**Top Materials List**")
                 st.dataframe(
                     df[mask].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS', 'P1']], 
                     use_container_width=True, height=500
@@ -249,7 +229,7 @@ if df is not None:
 
         # TAB 2: SUPPLY CHAIN
         with tab2:
-            st.markdown("### Criticality Analysis")
+            blue_header("Criticality Analysis", "🏭")
             if 'Pmax_t_per_yr' in df.columns and 'Plong_t' in df.columns:
                 fig_scale = px.scatter(
                     df, x='Plong_t', y='Pmax_t_per_yr', color='OSS',
@@ -257,14 +237,15 @@ if df is not None:
                     color_continuous_scale="Viridis",
                     labels={'Plong_t': 'Reserves (tons)', 'Pmax_t_per_yr': 'Production (t/yr)'}
                 )
+                fig_scale.update_layout(template="plotly_white")
                 st.plotly_chart(fig_scale, use_container_width=True)
             else:
                 st.warning("Missing Supply Data (Pmax/Plong).")
 
         # TAB 3: MONTE CARLO
         with tab3:
-            st.subheader("Robustness Check")
-            st.markdown("Simulating variations in your custom weights...")
+            blue_header("Robustness Check", "🔬")
+            st.markdown("Select a material to simulate how weight variations affect its position.")
             
             sel_mat = st.selectbox("Select Material:", df[mask]['Material_Name'].unique())
             
