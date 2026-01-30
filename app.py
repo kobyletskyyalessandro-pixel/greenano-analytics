@@ -344,7 +344,57 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
+
+
+
+
+    
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
+color_metric = st.selectbox(
+    "Coloring Metric",
+    ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+    index=0
+)
+
+st.markdown('<div class="blue-section-header"><p>3B. Sustainability Weights</p></div>', unsafe_allow_html=True)
+st.caption("SS = Π S_i^(x_i) with Σx_i = 1. Weights are auto-normalized.")
+
+default_w = [0.1] * 10
+w_in = []
+for i in range(1, 11):
+    w_in.append(
+        st.number_input(
+            f"Weight x{i} for S{i}",
+            min_value=0.0,
+            max_value=1.0,
+            value=default_w[i-1],
+            step=0.01,
+            key=f"w_s{i}"   # IMPORTANT: key unico
+        )
+    )
+
+w_sum = float(np.sum(w_in))
+if w_sum <= 0:
+    st.warning("All sustainability weights are 0. Using equal weights (0.1 each).")
+    w_ss = np.array([0.1] * 10, dtype=float)
+else:
+    w_ss = np.array(w_in, dtype=float) / w_sum
+
+st.markdown(
+    f"""
+    <div class="custom-summary-box" style="padding:10px 12px; margin-top:10px;">
+        <p style="margin:0; font-size:14px;"><b>Σ weights</b>: {w_sum:.3f} → normalized to 1</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+
+
+
+
+
+
+
 
     # metriche richieste (se mancano colonne -> fallback + warning nel tab)
     color_metric = st.selectbox(
