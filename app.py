@@ -478,7 +478,7 @@ with t2:
         yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
         legend_title_text="Legend",
     )
-
+    print("Number of points:", len(df_plot))
     st.plotly_chart(fig_sc, use_container_width=True)
 
 with t3:
