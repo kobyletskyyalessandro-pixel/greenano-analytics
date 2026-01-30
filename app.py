@@ -353,7 +353,7 @@ if df is not None:
                 x="Plong_t",
                 y="Pmax_t_per_yr",
                 color="OSS",
-                size=np.where(df_plot.get("Status", "Standard") == "Optimal Choice", 15, 8),
+                size=np.where(df_plot.get("Status", "Standard") == "Optimal Choice", 9, 5),
                     hover_name="Material_Name" if "Material_Name" in df_plot.columns else None,
                     log_x=True,
                     log_y=True,
