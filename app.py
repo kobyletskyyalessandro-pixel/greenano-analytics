@@ -266,54 +266,8 @@ def assign_tiered_scores(df, col_name, n_tiers, thresholds):
 
 # --- 4. INTERFACCIA APP ---
 df = load_and_sync_data()
-
-if df is None:
-    st.error("Assicurati di avere 'AF_vectors.csv' e 'Materials Database 1.csv' nella cartella di lavoro.")
-    st.stop()
-w_sum = float(np.sum(w_in))
-
-if w_sum <= 0:
-    st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
-    st.stop()
-
-if abs(w_sum - 1.0) > 1e-6:
-    st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
-    st.stop()
-
-
-
-
-# --- Compute SS from S1..S10 using user weights w_ss ---
-S_cols = [f"S{i}" for i in range(1, 11)]
-missing_S = [c for c in S_cols if c not in df.columns]
-if missing_S:
-    st.error(f"Missing sustainability columns in data: {missing_S}. SS cannot be computed.")
-    st.stop()
-
-S = df[S_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
-
-# tua scelta: NaN -> 0.3
-S = np.where(np.isnan(S), 0.3, S)
-S = np.clip(S, 1e-12, 1.0)
-
-# SS = exp( sum_i x_i log(S_i) )
-df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
-
-
-
-
-st.sidebar.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
-is_valid = True
-w_sum = float(np.sum(w_in))
 
-if w_sum <= 0:
-    st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
-    st.stop()
-
-if abs(w_sum - 1.0) > 1e-6:
-    st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
-    st.stop()
 
 
 with st.sidebar:
@@ -412,7 +366,6 @@ with st.sidebar:
             )
         )
 
-    w_sum = float(np.sum(w_in))
 
     w_sum = float(np.sum(w_in))
     
@@ -440,7 +393,20 @@ with st.sidebar:
     )
 
 
+# --- Compute SS from S1..S10 using user weights w_ss ---
+S_cols = [f"S{i}" for i in range(1, 11)]
+missing_S = [c for c in S_cols if c not in df.columns]
+if missing_S:
+    st.error(f"Missing sustainability columns in data: {missing_S}. SS cannot be computed.")
+    st.stop()
 
+S = df[S_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+
+# tua scelta: NaN -> 0.3
+S = np.where(np.isnan(S), 0.3, S)
+S = np.clip(S, 1e-12, 1.0)
+
+df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
 
 
 
