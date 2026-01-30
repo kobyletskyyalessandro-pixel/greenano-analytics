@@ -35,7 +35,7 @@ st.markdown("""
         border-right: 2px solid #e2e8f0;
     }
     
-    /* TESTI SIDEBAR STANDARD -> BLU */
+    /* TESTI SIDEBAR STANDARD -> BLU (Etichette, testi generici) */
     section[data-testid="stSidebar"] label {
         color: #1e3a8a !important; 
         font-weight: 700 !important;
@@ -45,7 +45,7 @@ st.markdown("""
     section[data-testid="stSidebar"] div,
     section[data-testid="stSidebar"] span,
     section[data-testid="stSidebar"] li {
-        color: #1e3a8a !important;
+        color: #1e3a8a; /* Colore default blu, ma verrà sovrascritto dall'inline style nei box */
     }
     section[data-testid="stSidebar"] small, 
     section[data-testid="stSidebar"] .caption {
@@ -83,16 +83,6 @@ st.markdown("""
         background-color: #2563eb !important;
     }
 
-    /* --- NUCLEAR FIX PER SCRITTE BIANCHE NEI BOX BLU --- */
-    /* Qualsiasi cosa dentro un elemento con classe 'force-white-container' diventa bianca */
-    .force-white-container {
-        color: #ffffff !important;
-    }
-    .force-white-container * {
-        color: #ffffff !important;
-        fill: #ffffff !important;
-    }
-
     /* TITOLI & CARD */
     h1, h2, h3, h4 { color: #1e3a8a !important; font-weight: 800; }
     div[data-testid="stVerticalBlock"] > div { 
@@ -121,20 +111,28 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- HELPER HEADER BLU (CON CLASSE NUCLEAR FIX) ---
+# --- HELPER HEADER BLU (CON STYLE INLINE DIRETTO) ---
+# Usiamo <p> con style diretto per forzare il bianco anche in Light Mode
 def blue_pill_header(text, icon=""):
     st.markdown(f"""
-    <div class="force-white-container" style="
+    <div style="
         background-color: #1e3a8a; 
         padding: 10px 18px; 
         border-radius: 8px; 
         margin-bottom: 15px; 
-        font-weight: 700; 
-        font-size: 15px; 
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        display: flex; align-items: center; gap: 8px;">
-        <span>{icon}</span> 
-        <span>{text}</span>
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+        <p style="
+            margin: 0; 
+            padding: 0; 
+            color: #ffffff !important; 
+            font-weight: 700; 
+            font-size: 15px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px;">
+            <span style="color: #ffffff !important;">{icon}</span> 
+            <span style="color: #ffffff !important;">{text}</span>
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -248,17 +246,22 @@ if df is not None:
         w_p2 = st.slider("Coeff. P2 (Mag)", 0.0, max(0.0, rem), min(0.33, rem))
         w_p3 = max(0.0, 1.0 - (w_p1 + w_p2))
         
-        # Riepilogo Visivo (CON CLASSE NUCLEAR FIX)
+        # Riepilogo Visivo (CON STILE INLINE FORZATO)
         st.markdown(f"""
-        <div class="force-white-container" style="
+        <div style="
             background-color: #1e3a8a; 
             padding: 10px; 
             border-radius: 8px; 
             margin-top: 10px; 
-            text-align: center;
-            font-size: 14px;
-            font-weight: 500;">
-            Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
+            text-align: center;">
+            <p style="
+                margin: 0; 
+                padding: 0; 
+                color: #ffffff !important; 
+                font-weight: 500; 
+                font-size: 14px;">
+                Temp: {w_p1:.2f} | Mag: {w_p2:.2f} | Coerc: {w_p3:.2f}
+            </p>
         </div>
         """, unsafe_allow_html=True)
         
