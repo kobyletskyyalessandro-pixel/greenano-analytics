@@ -65,7 +65,53 @@ def _weakest_link_vectorized(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.nd
     out = np.where(has_nan_used, np.nan, out)
     return out
 
+def _bottleneck_info(af_matrix: np.ndarray, v_elem: np.ndarray, elem_symbols_by_Z: dict | None):
+    """
+    Per ogni materiale:
+    - bottleneck element = argmin_i (v_i / x_i) per x_i>0
+    - min1 = minimo
+    - min2 = secondo minimo (tra gli elementi usati)
+    - bottleneck_ratio = min2/min1 (più alto = meno fragile; ~1 = robusto, >>1 = fragilissimo)
+    Ritorna: bottleneck_symbol, min1, min2, bottleneck_ratio
+    """
+    x = np.asarray(af_matrix, dtype=float)
+    v = np.asarray(v_elem, dtype=float).reshape(1, -1)
 
+    # ratio: v/x per elementi usati, inf per non usati
+    ratio = np.where(x > 0, v / np.maximum(x, 1e-30), np.inf)
+
+    # se un materiale usa un elemento con v=NaN -> ratio NaN -> meglio invalidare
+    used = x > 0
+    has_nan_used = np.any(used & np.isnan(v), axis=1)
+
+    # sostituisco NaN con inf solo per poter fare sort, ma poi invalidiamo con has_nan_used
+    ratio_safe = np.where(np.isnan(ratio), np.inf, ratio)
+
+    # ordina per riga
+    sorted_ratio = np.sort(ratio_safe, axis=1)
+    min1 = sorted_ratio[:, 0]
+    min2 = sorted_ratio[:, 1]  # se un materiale usa 1 solo elemento, sarà inf → ok
+
+    # argmin per trovare l'elemento limitante
+    argmin = np.argmin(ratio_safe, axis=1)  # 0..117
+    Z_lim = (argmin + 1).astype(int)
+
+    if elem_symbols_by_Z:
+        bottleneck_symbol = np.array([elem_symbols_by_Z.get(int(z), f"Z{int(z)}") for z in Z_lim], dtype=object)
+    else:
+        bottleneck_symbol = np.array([f"Z{int(z)}" for z in Z_lim], dtype=object)
+
+    # ratio di fragilità
+    bottleneck_ratio = min2 / np.maximum(min1, 1e-30)
+
+    # invalida i casi con NaN usati
+    bottleneck_symbol = np.where(has_nan_used, None, bottleneck_symbol)
+    min1 = np.where(has_nan_used, np.nan, min1)
+    min2 = np.where(has_nan_used, np.nan, min2)
+    bottleneck_ratio = np.where(has_nan_used, np.nan, bottleneck_ratio)
+
+    # se min2 è inf (materiale con 1 solo elemento), ratio sarà inf → ok, significa "non definito/mono-element"
+    return bottleneck_symbol, min1, min2, bottleneck_ratio
 
 
 
@@ -226,6 +272,29 @@ def load_and_sync_data():
     df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
     df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
 
+
+    # --- bottleneck diagnostics (production) ---
+    bn_el_P, bn_min1_P, bn_min2_P, bn_ratio_P = _bottleneck_info(af_matrix, v_prod, elem_symbols_by_Z)
+    df["Bottleneck_prod_element"] = bn_el_P
+    df["Bottleneck_prod_min1"] = bn_min1_P
+    df["Bottleneck_prod_min2"] = bn_min2_P
+    df["Bottleneck_prod_ratio"] = bn_ratio_P
+    
+    # --- bottleneck diagnostics (reserves / long-term) ---
+    bn_el_R, bn_min1_R, bn_min2_R, bn_ratio_R = _bottleneck_info(af_matrix, v_res, elem_symbols_by_Z)
+    df["Bottleneck_res_element"] = bn_el_R
+    df["Bottleneck_res_min1"] = bn_min1_R
+    df["Bottleneck_res_min2"] = bn_min2_R
+    df["Bottleneck_res_ratio"] = bn_ratio_R
+
+
+
+
+
+
+
+
+    
     # --- opzionale: metriche da DB (se esistono) ---
     try:
         v_hhi  = _build_prop_vector(db, "HHI")
@@ -451,12 +520,57 @@ with t1:
             use_container_width=True,
             height=500
         )
+    
+        # --- STEP 4: Bottleneck insight on Pareto set ---
+        if "Bottleneck_prod_element" in df.columns:
+            top_df = df[efficient].copy()
+    
+            counts = (
+                top_df["Bottleneck_prod_element"]
+                .value_counts()
+                .head(5)
+            )
+    
+            if len(counts) > 0:
+                st.markdown("**Most frequent production bottlenecks (Pareto set)**")
+                for el, n in counts.items():
+                    st.write(f"• **{el}** → {n} materials")
+
+
+
+
+
+
+
+
 
 with t2:
     st.markdown("### Scalability (Weakest-link)")
     st.caption("y = Pmax = min(P_i / x_i),  x = Plong = min(R_i / x_i).  (x_i = AF_i)")
 
     df_plot = df.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
+
+
+
+
+    # flag fragilità: ratio alto => un elemento domina nettamente
+    # soglia: top 10% dei ratio (robusto e automatico, non hard-coded)
+    if "Bottleneck_prod_ratio" in df_plot.columns:
+        thr = np.nanpercentile(df_plot["Bottleneck_prod_ratio"].to_numpy(dtype=float), 90)
+        df_plot["Bottleneck_fragile"] = df_plot["Bottleneck_prod_ratio"] >= thr
+    else:
+        df_plot["Bottleneck_fragile"] = False
+
+
+
+
+
+
+
+
+
+
+    
 
     metric_col = color_metric
     if metric_col not in df_plot.columns:
