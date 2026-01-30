@@ -4,6 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 import re
+import os
 
 # --- 1. CONFIGURAZIONE E STILE ---
 st.set_page_config(page_title="GreeNano Analytics", page_icon="🔬", layout="wide")
@@ -475,6 +476,35 @@ with st.sidebar:
         0.0, 0.40, 0.05, 0.01,
         help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
     )
+
+
+
+
+
+    # =========================
+    # GUIDE DOWNLOAD
+    # =========================
+    st.markdown('<div class="blue-section-header"><p>Guide</p></div>', unsafe_allow_html=True)
+
+    GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
+
+    if os.path.exists(GUIDE_PATH):
+        with open(GUIDE_PATH, "rb") as f:
+            st.download_button(
+                label="📘 Download User Guide (PDF)",
+                data=f,
+                file_name="GreenNanoAnalyticsGuide.pdf",
+                mime="application/pdf",
+                use_container_width=True,
+            )
+    else:
+        st.warning("Guide PDF not found.")
+
+
+
+
+
+
 
 
 
