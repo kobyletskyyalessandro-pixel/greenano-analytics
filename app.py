@@ -326,7 +326,7 @@ if df is not None:
                     color_discrete_map={"Optimal Choice": "#1e3a8a", "Standard": "#cbd5e1"}
                 )
                 fig.update_layout(template="plotly_white")
-                st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
 
             with colB:
                 st.markdown("**Top Pareto Materials**")
