@@ -65,6 +65,37 @@ def _weakest_link_vectorized(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.nd
     out = np.where(has_nan_used, np.nan, out)
     return out
 
+
+
+
+
+def _weighted_avg_with_nan_propagation(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.ndarray:
+    """
+    Media pesata per materiale: sum_i x_i * v_i
+    Se un materiale usa un elemento con v_i = NaN -> risultato = NaN
+    (così nel plot viene colorato in grigio)
+    """
+    x = np.asarray(af_matrix, dtype=float)
+    v = np.asarray(v_elem, dtype=float).reshape(1, -1)
+
+    used = x > 0
+    has_nan_used = np.any(used & np.isnan(v), axis=1)
+
+    out = x @ np.nan_to_num(v_elem, nan=0.0)
+    out = np.where(has_nan_used, np.nan, out)
+    return out
+
+
+
+
+
+
+
+
+
+
+
+
 def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dict | None) -> tuple[np.ndarray, np.ndarray, dict]:
     info = {"ree_missing_prod": [], "ree_missing_res": [], "note": ""}
 
@@ -179,6 +210,33 @@ def load_and_sync_data():
 
         af_matrix = df[af_cols].fillna(0.0).to_numpy(dtype=float)
 
+
+                # --- Sustainability / market metrics from element DB (material-level aggregation) ---
+        # these are ELEMENT-level in the DB -> we aggregate to MATERIAL-level via AF weights
+        try:
+            v_hhi  = _build_prop_vector(db, "HHI")
+            v_esg  = _build_prop_vector(db, "ESG")
+            v_sr   = _build_prop_vector(db, "Supply risk")
+            v_comp = _build_prop_vector(db, "Companionality")   # matches "Companionality (%)"
+        
+            df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
+            df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
+            df["Supply risk"] = _weighted_avg_with_nan_propagation(af_matrix, v_sr)
+            df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
+        
+        except Exception as _e:
+            # non blocchiamo l'app se manca qualcosa
+            pass
+
+
+
+
+
+
+
+
+        
+
         df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
         df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
 
@@ -289,7 +347,19 @@ with st.sidebar:
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
     # metriche richieste (se mancano colonne -> fallback + warning nel tab)
-    color_metric = st.selectbox("Coloring Metric", ["OSS", "Companionality %", "HHI", "ESG"], index=0)
+
+
+    color_metric = st.selectbox(
+    "Coloring Metric",
+    ["OSS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
+    index=0
+)
+
+
+
+
+
+
 
 # --- CALCOLI ---
 p1_s = assign_tiered_scores(df, "P1", sf_t, manual_thresholds["P1"]) if "P1" in df.columns else 1.0
