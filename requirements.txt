@@ -1,0 +1,7 @@
+dash              
+dash-bootstrap
+flask
+pandas            
+numpy            
+streamlit         
+plotly            
