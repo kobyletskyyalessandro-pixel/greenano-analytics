@@ -243,17 +243,10 @@ def load_and_sync_data():
         df["Calc_Production"] = af_matrix @ np.nan_to_num(v_prod, nan=0.0)
         df["Calc_Reserves"]   = af_matrix @ np.nan_to_num(v_res,  nan=0.0)
 
-        if not all(f"S{i}" in df.columns for i in range(1, 11)):
-            if "OSS" not in df.columns:
-                def norm01(s):
-                    s = pd.to_numeric(s, errors="coerce")
-                    s = s.replace([np.inf, -np.inf], np.nan)
-                    mn, mx = np.nanmin(s), np.nanmax(s)
-                    return (s - mn) / (mx - mn + 1e-12)
-
-                a = norm01(np.log10(df["Pmax_t_per_yr"].replace(0, np.nan)))
-                b = norm01(np.log10(df["Plong_t"].replace(0, np.nan)))
-                df["OSS"] = (a + b) / 2.0
+       # Do NOT compute SS here.
+# If S1..S10 are missing, we cannot compute SS later -> stop.
+if not all(f"S{i}" in df.columns for i in range(1, 11)):
+    raise ValueError("Missing S1..S10 columns in AF_vectors.csv. SS cannot be computed.")
 
         for c in ["P1", "P2", "P3"]:
             if c in df.columns:
@@ -285,6 +278,27 @@ df = load_and_sync_data()
 if df is None:
     st.error("Assicurati di avere 'AF_vectors.csv' e 'Materials Database 1.csv' nella cartella di lavoro.")
     st.stop()
+
+
+
+# --- Compute SS from S1..S10 using user weights w_ss ---
+S_cols = [f"S{i}" for i in range(1, 11)]
+missing_S = [c for c in S_cols if c not in df.columns]
+if missing_S:
+    st.error(f"Missing sustainability columns in data: {missing_S}. SS cannot be computed.")
+    st.stop()
+
+S = df[S_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
+
+# tua scelta: NaN -> 0.3
+S = np.where(np.isnan(S), 0.3, S)
+S = np.clip(S, 1e-12, 1.0)
+
+# SS = exp( sum_i x_i log(S_i) )
+df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
+
+
+
 
 st.sidebar.markdown('<p class="settings-title">Settings</p>', unsafe_allow_html=True)
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
@@ -399,7 +413,7 @@ st.markdown(
     # metriche richieste (se mancano colonne -> fallback + warning nel tab)
     color_metric = st.selectbox(
     "Coloring Metric",
-    ["OSS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
+    ["SS", "Companionality (%)", "HHI", "ESG", "Supply risk"],
     index=0
 )
 
@@ -413,8 +427,8 @@ st.markdown(
     
     trend_metrics = st.multiselect(
         "Metrics to test vs H = log(Pmax)+log(Plong)",
-        ["OSS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
-        default=["OSS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
+        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"]
 )
 
 
@@ -440,7 +454,7 @@ t1, t2, t3, t4 = st.tabs([
 
 with t1:
     colA, colB = st.columns([2, 1])
-    pts = df[["OPS", "OSS"]].to_numpy(dtype=float)
+    pts = df[["OPS", "SS"]].to_numpy(dtype=float)
 
     efficient = np.ones(pts.shape[0], dtype=bool)
     for i, c in enumerate(pts):
@@ -451,7 +465,7 @@ with t1:
 
     with colA:
         fig = px.scatter(
-            df, x="OPS", y="OSS", color="Status",
+            df, x="OPS", y="SS", color="Status",
             hover_name="Material_Name" if "Material_Name" in df.columns else None,
             color_discrete_map={"Optimal Choice": "#1e3a8a", "Standard": "#cbd5e1"}
         )
@@ -460,7 +474,7 @@ with t1:
 
     with colB:
         st.markdown("**Top Pareto Materials**")
-        show_cols = [c for c in ["Material_Name", "OPS", "OSS"] if c in df.columns]
+        show_cols = [c for c in ["Material_Name", "OPS", "SS"] if c in df.columns]
         st.dataframe(
             df[efficient].sort_values(by="OPS", ascending=False)[show_cols],
             use_container_width=True,
@@ -475,8 +489,8 @@ with t2:
 
     metric_col = color_metric
     if metric_col not in df_plot.columns:
-        st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'OSS' come fallback.")
-        metric_col = "OSS"
+        st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'SS' come fallback.")
+        metric_col = "SS"
 
     if metric_col not in df_plot.columns:
         df_plot[metric_col] = np.nan
@@ -560,7 +574,7 @@ with t3:
             c_ops = np.exp(np.dot(W_sim, np.log(s_vec + 1e-9)))
             fig_mc = px.scatter(
                 x=c_ops,
-                y=[df.loc[idx, "OSS"]] * 1000,
+                y=[df.loc[idx, "SS"]] * 1000,
                 opacity=0.3,
             )
             fig_mc.update_layout(template="plotly_white")
@@ -591,7 +605,7 @@ with t4:
         "Supply risk": "Supply risk",
         "HHI": "HHI",
         "ESG": "ESG",
-        "OSS": "OSS",
+        "SS": "SS",
     }
 
     cols = st.columns(2)
