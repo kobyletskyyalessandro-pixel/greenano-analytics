@@ -86,14 +86,9 @@ def generate_linear_scores(n_tiers):
 def assign_tiered_scores(df, col_name, n_tiers, thresholds):
     """Assegna score basati su soglie manuali in ordine ASCENDENTE."""
     scores = generate_linear_scores(n_tiers)
-    # Partiamo dallo score più basso (1/N)
     assigned = pd.Series(scores[0], index=df.index, dtype=float)
     
-    # Applichiamo le soglie: chi supera la soglia k prende lo score k+1
-    # Es: 3 Tiers, Soglie T1, T2.
-    # Se V >= T2 -> Score 1.0 (scores[2])
-    # Se V >= T1 -> Score 0.66 (scores[1]) - sovrascrive se non già coperto da T2
-    # Noi applichiamo dalla più bassa alla più alta per sovrascrivere verso l'alto
+    # Applichiamo dalla soglia più bassa alla più alta per sovrascrivere verso l'alto
     for i in range(len(thresholds)):
         val = thresholds[i]
         sc = scores[i+1]
@@ -128,19 +123,22 @@ if df is not None:
         # SEZIONE 1: TIERS & THRESHOLDS
         st.markdown('<div class="blue-section-header"><p>1. Performance Tiers</p></div>', unsafe_allow_html=True)
         
-        # P1: TEMP (Min 350)
+        # P1: TEMP (Step impostato a 1.0 per cambiare le unità)
         st.markdown("**P1: Temperature (K)**")
         sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2)
         sc_t = generate_linear_scores(sf_t)
         for i in range(sf_t - 1):
-            val = st.number_input(f"Threshold for Score {sc_t[i+1]} (P1)", value=350.0 + (i*50), min_value=350.0, key=f"p1_{i}")
+            val = st.number_input(f"Threshold for Score {sc_t[i+1]} (P1)", 
+                                  value=350.0 + (i*50), 
+                                  min_value=350.0, 
+                                  step=1.0, 
+                                  key=f"p1_{i}")
             manual_thresholds['P1'].append(val)
-        # Controllo ordine
         if any(manual_thresholds['P1'][i] >= manual_thresholds['P1'][i+1] for i in range(len(manual_thresholds['P1'])-1)):
             st.error("Error: P1 thresholds must be strictly ascending!")
             is_valid = False
 
-        # P2: MAG (Min 0.4)
+        # P2: MAG
         st.markdown("---")
         st.markdown("**P2: Magnetization (T)**")
         sf_m = st.selectbox("Subcategories (P2)", [2, 3, 4, 5], index=1)
@@ -152,7 +150,7 @@ if df is not None:
             st.error("Error: P2 thresholds must be strictly ascending!")
             is_valid = False
 
-        # P3: COERC (Min 0.4)
+        # P3: COERC
         st.markdown("---")
         st.markdown("**P3: Coercivity (T)**")
         sf_c = st.selectbox("Subcategories (P3)", [2, 3, 4, 5], index=3)
@@ -186,7 +184,7 @@ if df is not None:
         
         df['OPS'] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
         
-        # Calcolo Score Sostenibilità (OSS) = Media Geometrica S1-S10
+        # Calcolo Score Sostenibilità (OSS)
         s_cols = [f'S{i}' for i in range(1, 11)]
         if all(c in df.columns for c in s_cols):
             s_data = df[s_cols].apply(pd.to_numeric, errors='coerce').fillna(0.1).to_numpy()
@@ -197,7 +195,6 @@ if df is not None:
         # --- TABS ---
         t1, t2, t3 = st.tabs(["🏆 Pareto Ranking", "🏭 Scalability Map", "🔬 Stability Analysis"])
 
-        # TAB 1: RANKING
         with t1:
             colA, colB = st.columns([2, 1])
             with colA:
@@ -218,7 +215,6 @@ if df is not None:
                 st.dataframe(df[efficient].sort_values(by="OPS", ascending=False)[['Material_Name', 'OPS', 'OSS']], 
                              use_container_width=True, height=500)
 
-        # TAB 2: SCALABILITY
         with t2:
             if 'Pmax_t_per_yr' in df.columns and 'Plong_t' in df.columns:
                 fig_sc = px.scatter(df, x='Plong_t', y='Pmax_t_per_yr', color='OSS', log_x=True, log_y=True,
@@ -229,7 +225,6 @@ if df is not None:
             else:
                 st.warning("Missing Supply Data (Pmax/Plong) in CSV.")
 
-        # TAB 3: STABILITY (MONTE CARLO)
         with t3:
             st.markdown("### Robustness Simulation")
             opts = df[efficient]['Material_Name'].unique()
@@ -247,10 +242,7 @@ if df is not None:
                                               marker=dict(color='red', size=12, symbol='star'), name='Current Point'))
                     fig_mc.update_layout(template="plotly_white", xaxis_title="OPS Stability", yaxis_title="OSS Stability")
                     st.plotly_chart(fig_mc, use_container_width=True)
-            else:
-                st.info("No optimal materials to simulate.")
     else:
         st.warning("Please correct the threshold order in the sidebar to proceed.")
-
 else:
     st.error("Ensure 'MF_sustainability_rank.csv' is in the working directory.")
