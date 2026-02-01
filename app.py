@@ -297,6 +297,7 @@ def load_and_sync_data():
         "Compound_CO2_footprint_with_estimated_recycling_rate_CO2_per_kg": "CO2/kg rec.",
         "Compound_CO2_footprint_kg_CO2_per_kg": "CO2/kg",
         "Compound_Energy_footprint_MJ_per_kg": "MJ/kg",
+        "Compound_Energy_footprint_with_estimated_recycling_rate_MJ_per_kg": "MJ/kg rec.",
         "Compound_Water_usage_l_per_kg": "L/kg"
     }
 
@@ -429,7 +430,22 @@ df = load_and_sync_data()
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 
 # Definisci le metriche disponibili (inclusi i nuovi)
-all_metrics_options = ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "CO2/kg", "CO2/kg rec.", "MJ/kg", "L/kg"]
+all_metrics_options = ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", 
+                       "CO2/kg", "CO2/kg rec.", "MJ/kg", "MJ/kg rec.", "L/kg"]
+
+# Dizionario descrizioni
+metric_descriptions = {
+    "SS": "Sustainability Score (calculated based on your weights for S1-S10).",
+    "HHI": "Herfindahl-Hirschman Index: A measure of market concentration.",
+    "ESG": "Environmental, Social, and Governance score.",
+    "Supply risk": "Risk associated with the supply chain stability.",
+    "Companionality (%)": "Percentage of the element produced as a byproduct.",
+    "CO2/kg": "CO2 prodotta per kg di compound (Carbon Footprint).",
+    "CO2/kg rec.": "CO2 prodotta per kg di compound, stimando il tasso di riciclo.",
+    "MJ/kg": "Footprint energetico per kg di compound (Energy Consumption).",
+    "MJ/kg rec.": "Footprint energetico per kg di compound, stimando il tasso di riciclo.",
+    "L/kg": "Utilizzo di acqua (in litri) per kg di compound (Water Footprint)."
+}
 
 with st.sidebar:
     
@@ -544,13 +560,18 @@ with st.sidebar:
     # =========================
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
-    # UPDATED: Added new metrics to the list
+    # UPDATED: Added new metrics to the list and description box
     color_metric = st.selectbox(
         "Coloring Metric",
         all_metrics_options,
         index=0,
         key="color_metric"
     )
+    
+    # Show description of selected metric
+    curr_desc = metric_descriptions.get(color_metric, "")
+    if curr_desc:
+        st.info(f"ℹ️ **Meaning**: {curr_desc}")
 
     # =========================
     # 3B) SUSTAINABILITY WEIGHTS
@@ -831,6 +852,14 @@ with t3:
     st.markdown("### Does a metric increase when moving top-right?")
     st.caption("We test each metric Y against H = log(Pmax) + log(Plong). NaN points are ignored.")
 
+    # --- DISCLAIMER ROSSO (RICHIESTA UTENTE) ---
+    st.markdown("""
+    <div style='color: #b91c1c; background-color: #fef2f2; padding: 10px; border-radius: 5px; border: 1px solid #fca5a5; margin-bottom: 15px;'>
+    <b>Note regarding data visualization:</b> Flat trend lines or clustered points may indicate a lack of variance in the underlying data for specific metrics, or that the values are extremely close to one another. Please use the interactive zoom tools on the charts to inspect dense clusters.
+    </div>
+    """, unsafe_allow_html=True)
+    # -------------------------------------------
+
     base = df.copy()
 
     base = base.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
@@ -853,6 +882,7 @@ with t3:
         "CO2/kg": "CO2/kg",
         "CO2/kg rec.": "CO2/kg rec.",
         "MJ/kg": "MJ/kg",
+        "MJ/kg rec.": "MJ/kg rec.",
         "L/kg": "L/kg",
     }
 
