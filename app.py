@@ -291,22 +291,37 @@ def load_and_sync_data():
     else:
         raise ValueError("No common key to merge sustainability scores. Need Original_Index or Material_Name in BOTH files.")
     
-    # --- MODIFICA CHIAVE: includi la colonna CO2 nel merge ---
-    co2_col_long = "Compound_CO2_footprint_with_estimated_recycling_rate_CO2_per_kg"
-    
+    # --- MODIFICA: Mapping nuove colonne ---
+    # CSV Column Name -> App Short Label
+    new_metrics_map = {
+        "Compound_CO2_footprint_with_estimated_recycling_rate_CO2_per_kg": "CO2/kg rec.",
+        "Compound_CO2_footprint_kg_CO2_per_kg": "CO2/kg",
+        "Compound_Energy_footprint_MJ_per_kg": "MJ/kg",
+        "Compound_Water_usage_l_per_kg": "L/kg"
+    }
+
     cols_to_merge = [join_key] + S_cols
     
-    # Verifica se la colonna CO2 esiste nel file CSV di sostenibilità
-    if co2_col_long in sus.columns:
-        cols_to_merge.append(co2_col_long)
+    # Aggiungi solo le colonne che esistono effettivamente nel CSV
+    valid_new_cols = []
+    for csv_col in new_metrics_map.keys():
+        if csv_col in sus.columns:
+            valid_new_cols.append(csv_col)
+    
+    cols_to_merge += valid_new_cols
     
     sus_small = sus[cols_to_merge].copy()
     
     # merge
     df = df.merge(sus_small, on=join_key, how="left")
     
-    # rename the S columns to exactly S1..S10 (in case they were S1_something)
+    # rename S columns
     rename_map = {S_cols[i-1]: f"S{i}" for i in range(1, 11)}
+    
+    # rename New Metrics columns (dal nome lungo al nome corto)
+    for csv_col in valid_new_cols:
+        rename_map[csv_col] = new_metrics_map[csv_col]
+
     df = df.rename(columns=rename_map)
 
     # --- pulizia DB elementare ---
@@ -378,20 +393,11 @@ def load_and_sync_data():
     except Exception:
         pass
 
-    # --- AGGIUNTA RICHIESTA: CO2 FOOTPRINT ---
-    co2_label = "(CO2/kg)"
+    # --- Converti in numerico le nuove metriche (se esistono dopo il merge) ---
+    for label in new_metrics_map.values():
+        if label in df.columns:
+            df[label] = pd.to_numeric(df[label], errors="coerce")
     
-    # 1. Se esiste già come colonna materiale (ora inclusa nel merge), usala
-    if co2_col_long in df.columns:
-        df[co2_label] = pd.to_numeric(df[co2_col_long], errors="coerce")
-    
-    # 2. Fallback: calcolarla dal DB elementi se non trovata nel file materiali
-    else:
-        try:
-            v_co2 = _build_prop_vector(db, "CO2")
-            df[co2_label] = _weighted_avg_with_nan_propagation(af_matrix, v_co2)
-        except Exception:
-            pass
     # ----------------------------------------
 
     # --- cleanup numerico ---
@@ -422,7 +428,8 @@ def assign_tiered_scores(df, col_name, n_tiers, thresholds):
 df = load_and_sync_data()
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 
-
+# Definisci le metriche disponibili (inclusi i nuovi)
+all_metrics_options = ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "CO2/kg", "CO2/kg rec.", "MJ/kg", "L/kg"]
 
 with st.sidebar:
     
@@ -516,14 +523,31 @@ with st.sidebar:
     )
 
     # =========================
+    # MOVED: PARETO SETTINGS
+    # =========================
+    st.markdown('<div class="blue-section-header"><p>Pareto settings(/epsilon)</p></div>', unsafe_allow_html=True)
+
+    eps_ops = st.slider(
+        "ε on OPS (tolerance)",
+        0.0, 0.60, 0.20, 0.02,
+        help="0 = hard Pareto. 0.05 means 'allow 5% worse OPS' and still keep near-front points."
+    )
+
+    eps_ss = st.slider(
+        "ε on SS (tolerance)",
+        0.0, 0.40, 0.05, 0.01,
+        help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
+    )
+
+    # =========================
     # 3) SCALABILITY VIEW
     # =========================
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
-    # UPDATED: Added "(CO2/kg)" to the list
+    # UPDATED: Added new metrics to the list
     color_metric = st.selectbox(
         "Coloring Metric",
-        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
+        all_metrics_options,
         index=0,
         key="color_metric"
     )
@@ -562,32 +586,18 @@ with st.sidebar:
     # ✅ se arrivi qui, la somma è 1
     w_ss = np.array(w_in, dtype=float)
     st.success("✅ OK: Σxᵢ = 1")
+
     # =========================
     # 4) TOP-RIGHT TREND
     # =========================
     st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
 
-    # UPDATED: Added "(CO2/kg)" to metrics
+    # UPDATED: Added new metrics
     trend_metrics = st.multiselect(
         "Metrics to test vs H = log(Pmax)+log(Plong)",
-        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
-        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
+        all_metrics_options,
+        default=all_metrics_options,
         key="trend_metrics"
-    )
-
-
-    st.markdown('<div class="blue-section-header"><p>Soft Pareto (ε)</p></div>', unsafe_allow_html=True)
-
-    eps_ops = st.slider(
-        "ε on OPS (tolerance)",
-        0.0, 0.60, 0.20, 0.02,
-        help="0 = hard Pareto. 0.05 means 'allow 5% worse OPS' and still keep near-front points."
-    )
-
-    eps_ss = st.slider(
-        "ε on SS (tolerance)",
-        0.0, 0.40, 0.05, 0.01,
-        help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
     )
 
 
@@ -739,7 +749,7 @@ with t2:
 
 
     
-    # UPDATED: Use the variable logic for labels, fallback includes (CO2/kg)
+    # UPDATED: Use the variable logic for labels, fallback includes new metrics
     metric_col = color_metric
     if metric_col not in df_plot.columns:
         st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'SS' come fallback.")
@@ -839,7 +849,11 @@ with t3:
         "HHI": "HHI",
         "ESG": "ESG",
         "SS": "SS",
-        "(CO2/kg)": "(CO2/kg)", # Added label mapping
+        # New metrics don't strict mapping since we renamed columns directly, but explicit is fine
+        "CO2/kg": "CO2/kg",
+        "CO2/kg rec.": "CO2/kg rec.",
+        "MJ/kg": "MJ/kg",
+        "L/kg": "L/kg",
     }
 
     cols = st.columns(2)
