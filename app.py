@@ -211,16 +211,6 @@ def _weighted_avg_with_nan_propagation(af_matrix: np.ndarray, v_elem: np.ndarray
     return out
 
 
-
-
-
-
-
-
-
-
-
-
 def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dict | None) -> tuple[np.ndarray, np.ndarray, dict]:
     info = {"ree_missing_prod": [], "ree_missing_res": [], "note": ""}
 
@@ -278,7 +268,7 @@ def load_and_sync_data():
     sus.columns = [str(c).strip() for c in sus.columns]
     df.columns  = [str(c).strip() for c in df.columns]
     
-    # find S1..S10 columns robustly (accept exact "S1" or things that start with "S1")
+    # find S1..S10 columns robustly
     S_cols = []
     for i in range(1, 11):
         target = f"S{i}"
@@ -301,8 +291,16 @@ def load_and_sync_data():
     else:
         raise ValueError("No common key to merge sustainability scores. Need Original_Index or Material_Name in BOTH files.")
     
-    # keep only key + S columns
-    sus_small = sus[[join_key] + S_cols].copy()
+    # --- MODIFICA CHIAVE: includi la colonna CO2 nel merge ---
+    co2_col_long = "Compound_CO2_footprint_with_estimated_recycling_rate_CO2_per_kg"
+    
+    cols_to_merge = [join_key] + S_cols
+    
+    # Verifica se la colonna CO2 esiste nel file CSV di sostenibilità
+    if co2_col_long in sus.columns:
+        cols_to_merge.append(co2_col_long)
+    
+    sus_small = sus[cols_to_merge].copy()
     
     # merge
     df = df.merge(sus_small, on=join_key, how="left")
@@ -365,21 +363,13 @@ def load_and_sync_data():
     df["Bottleneck_res_min1"] = bn_min1_R
     df["Bottleneck_res_min2"] = bn_min2_R
     df["Bottleneck_res_ratio"] = bn_ratio_R
-
-
-
-
-
-
-
-
     
     # --- opzionale: metriche da DB (se esistono) ---
     try:
-        v_hhi  = _build_prop_vector(db, "HHI")
-        v_esg  = _build_prop_vector(db, "ESG")
-        v_sr   = _build_prop_vector(db, "Supply risk")
-        v_comp = _build_prop_vector(db, "Companionality (%)")
+        v_hhi   = _build_prop_vector(db, "HHI")
+        v_esg   = _build_prop_vector(db, "ESG")
+        v_sr    = _build_prop_vector(db, "Supply risk")
+        v_comp  = _build_prop_vector(db, "Companionality (%)")
 
         df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
         df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
@@ -387,6 +377,22 @@ def load_and_sync_data():
         df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
     except Exception:
         pass
+
+    # --- AGGIUNTA RICHIESTA: CO2 FOOTPRINT ---
+    co2_label = "(CO2/kg)"
+    
+    # 1. Se esiste già come colonna materiale (ora inclusa nel merge), usala
+    if co2_col_long in df.columns:
+        df[co2_label] = pd.to_numeric(df[co2_col_long], errors="coerce")
+    
+    # 2. Fallback: calcolarla dal DB elementi se non trovata nel file materiali
+    else:
+        try:
+            v_co2 = _build_prop_vector(db, "CO2")
+            df[co2_label] = _weighted_avg_with_nan_propagation(af_matrix, v_co2)
+        except Exception:
+            pass
+    # ----------------------------------------
 
     # --- cleanup numerico ---
     for c in ["P1", "P2", "P3"]:
@@ -514,9 +520,10 @@ with st.sidebar:
     # =========================
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
 
+    # UPDATED: Added "(CO2/kg)" to the list
     color_metric = st.selectbox(
         "Coloring Metric",
-        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
         index=0,
         key="color_metric"
     )
@@ -560,10 +567,11 @@ with st.sidebar:
     # =========================
     st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
 
+    # UPDATED: Added "(CO2/kg)" to metrics
     trend_metrics = st.multiselect(
         "Metrics to test vs H = log(Pmax)+log(Plong)",
-        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
-        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)"],
+        ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
+        default=["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", "(CO2/kg)"],
         key="trend_metrics"
     )
 
@@ -731,7 +739,7 @@ with t2:
 
 
     
-
+    # UPDATED: Use the variable logic for labels, fallback includes (CO2/kg)
     metric_col = color_metric
     if metric_col not in df_plot.columns:
         st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'SS' come fallback.")
@@ -831,6 +839,7 @@ with t3:
         "HHI": "HHI",
         "ESG": "ESG",
         "SS": "SS",
+        "(CO2/kg)": "(CO2/kg)", # Added label mapping
     }
 
     cols = st.columns(2)
