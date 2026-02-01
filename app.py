@@ -433,18 +433,18 @@ manual_thresholds = {"P1": [], "P2": [], "P3": []}
 all_metrics_options = ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", 
                        "CO2/kg", "CO2/kg rec.", "MJ/kg", "MJ/kg rec.", "L/kg"]
 
-# Dizionario descrizioni
+# Dizionario descrizioni (ENGLISH)
 metric_descriptions = {
     "SS": "Sustainability Score (calculated based on your weights for S1-S10).",
     "HHI": "Herfindahl-Hirschman Index: A measure of market concentration.",
     "ESG": "Environmental, Social, and Governance score.",
     "Supply risk": "Risk associated with the supply chain stability.",
     "Companionality (%)": "Percentage of the element produced as a byproduct.",
-    "CO2/kg": "CO2 prodotta per kg di compound (Carbon Footprint).",
-    "CO2/kg rec.": "CO2 prodotta per kg di compound, stimando il tasso di riciclo.",
-    "MJ/kg": "Footprint energetico per kg di compound (Energy Consumption).",
-    "MJ/kg rec.": "Footprint energetico per kg di compound, stimando il tasso di riciclo.",
-    "L/kg": "Utilizzo di acqua (in litri) per kg di compound (Water Footprint)."
+    "CO2/kg": "CO2 produced per kg of compound (Carbon Footprint).",
+    "CO2/kg rec.": "CO2 produced per kg of compound, estimating recycling rate.",
+    "MJ/kg": "Energy footprint per kg of compound (Energy Consumption).",
+    "MJ/kg rec.": "Energy footprint per kg of compound, estimating recycling rate.",
+    "L/kg": "Water usage (in liters) per kg of compound (Water Footprint)."
 }
 
 with st.sidebar:
@@ -855,7 +855,7 @@ with t3:
     # --- DISCLAIMER ROSSO (RICHIESTA UTENTE) ---
     st.markdown("""
     <div style='color: #b91c1c; background-color: #fef2f2; padding: 10px; border-radius: 5px; border: 1px solid #fca5a5; margin-bottom: 15px;'>
-    <b>Note regarding data visualization:</b> Flat trend lines or clustered points may indicate a lack of variance in the underlying data for specific metrics, or that the values are extremely close to one another. Please use the interactive zoom tools on the charts to inspect dense clusters.
+    <b>Note regarding data visualization:</b> Flat trend lines or clustered points often indicate <b>missing data</b> for specific metrics, a lack of variance in the underlying data, or that the values are extremely close to one another. Please use the interactive zoom tools on the charts to inspect dense clusters. (Future updates will allow for the inclusion of additional data).
     </div>
     """, unsafe_allow_html=True)
     # -------------------------------------------
