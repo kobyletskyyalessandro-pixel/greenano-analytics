@@ -578,9 +578,9 @@ with t3:
             
             with cols[idx % 2]:
                 st.plotly_chart(fig, use_container_width=True)
-                # SCRITTA STATISTICHE RIPRISTINATA
+                # SCRITTA STATISTICHE (RIMOSSA SOLO INTERCETTA)
                 st.write(
-                    f"**Stats** — n={len(y)} | slope={m:.4g} | intercept={q:.4g} | "
+                    f"**Stats** — n={len(y)} | slope={m:.4g} | "
                     f"R²={r2:.3f} | Pearson r={r:.3f} | Spearman ρ={rho:.3f} | χ²_red(proxy)={chi2_red:.2f}"
                 )
             idx += 1
