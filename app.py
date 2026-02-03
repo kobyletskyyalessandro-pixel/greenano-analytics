@@ -505,20 +505,35 @@ with t2:
             marker=dict(
                 size=np.where(df_nonan["Status"] == "Optimal Choice", 10, 7),
                 color=df_nonan[metric_col], colorscale="Viridis", showscale=True,
-                colorbar=dict(title=metric_col), opacity=0.9
+                # MODIFICA: Spostato titolo sopra la barra (side="top")
+                colorbar=dict(
+                    title=dict(text=metric_col, side="top"),
+                    xpad=15 # Un po' di padding per staccarlo
+                ), 
+                opacity=0.9
             ),
             text=df_nonan["Material_Name"],
-            hovertemplate="%{text}<br>Plong=%{x:.3g}<br>Pmax=%{y:.3g}<br>Val=%{marker.color:.3g}"
+            hovertemplate="%{text}<br>Plong=%{x:.3g}<br>Pmax=%{y:.3g}<br>Val=%{marker.color:.3g}",
+            name=metric_col # Nome traccia per legenda
         ))
     if not df_nan.empty:
         fig_sc.add_trace(go.Scatter(
             x=df_nan["Plong_t"], y=df_nan["Pmax_t_per_yr"], mode="markers",
             marker=dict(size=7, color="lightgrey", opacity=0.9),
-            text=df_nan["Material_Name"], hovertemplate="%{text}<br>Val=NaN"
+            text=df_nan["Material_Name"], hovertemplate="%{text}<br>Val=NaN",
+            name=f"{metric_col} (NaN)" # Nome traccia per legenda
         ))
     
-    fig_sc.update_layout(template="plotly_white", height=600, xaxis_type="log", yaxis_type="log",
-                         xaxis_title="Long-term prod (tons)", yaxis_title="Max yearly prod (t/yr)")
+    fig_sc.update_layout(
+        template="plotly_white", 
+        height=600, 
+        xaxis_type="log", 
+        yaxis_type="log",
+        xaxis_title="Long-term prod (tons)", 
+        yaxis_title="Max yearly prod (t/yr)",
+        # Legenda in basso orizzontale
+        legend=dict(orientation="h", y=-0.25, x=0.0) 
+    )
     st.plotly_chart(fig_sc, use_container_width=True)
 
 with t3:
