@@ -118,7 +118,6 @@ WORLD_REO_RESERVES  = 90_000_000.0
 
 # --- 2. MOTORE DI CARICAMENTO E PULIZIA ---
 def clean_numeric(series):
-    """Pulisce stringhe con virgole, testi (es. 'primary') e converte in numeri."""
     return pd.to_numeric(series.astype(str).str.replace(r'[^-0-9.]', '', regex=True), errors='coerce')
 
 def _find_col_by_keyword(df: pd.DataFrame, keyword: str) -> str:
@@ -210,7 +209,6 @@ def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dic
 
 @st.cache_data
 def load_and_sync_data():
-    # --- carica file ---
     df = pd.read_csv("AF_vectors.csv")
     db = pd.read_csv("Materials Database 1.csv")
     sus = pd.read_csv("MF_sustainability_rank.csv")
@@ -313,15 +311,20 @@ def generate_linear_scores(n_tiers):
 def assign_tiered_scores(df, col_name, n_tiers, thresholds):
     scores = generate_linear_scores(n_tiers)
     assigned = pd.Series(scores[0], index=df.index, dtype=float)
-    # IMPORTANTE: Se thresholds è vuoto (es. prima del render), non crasha
     if not thresholds: return assigned
-    
     for i in range(len(thresholds)):
         assigned[df[col_name] >= thresholds[i]] = scores[i+1]
     return assigned
 
+def check_ascending_order(values, label):
+    """Verifica che i valori siano strettamente crescenti"""
+    if not values: return
+    # Controllo se ogni elemento è minore del successivo
+    if not all(x < y for x, y in zip(values, values[1:])):
+        st.error(f"❌ Error in **{label}**: Values must be in strict ascending order (e.g., 100 < 200 < 300).")
+        st.stop() # Blocca l'esecuzione dell'app
+
 # --- 4. INTERFACCIA APP ---
-# SOLUZIONE: Usare .copy() per assicurare che df sia "pulito" ad ogni rerun
 df = load_and_sync_data().copy()
 
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
@@ -345,7 +348,6 @@ metric_descriptions = {
 with st.sidebar:
     st.markdown("""<div class="sidebar-header"><div class="sidebar-title">Settings</div></div>""", unsafe_allow_html=True)
 
-    # Bottone di emergenza per pulire la cache se cambi i file CSV
     if st.button("♻️ Clear Cache & Reload"):
         st.cache_data.clear()
         st.rerun()
@@ -355,13 +357,19 @@ with st.sidebar:
         with open(GUIDE_PATH, "rb") as f:
             st.download_button("📘", f, "GreenNanoAnalyticsGuide.pdf", "application/pdf")
 
-    # --- INPUT THRESHOLDS ---
+    # --- INPUT THRESHOLDS + VALIDATION ---
+    
+    # --- P1 ---
     sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2, key="sf_P1")
     sc_t = generate_linear_scores(sf_t)
     for i in range(sf_t - 1):
         val = st.number_input(f"Threshold Score {sc_t[i+1]} (P1)", value=int(350 + (i * 50)), step=1, key=f"p1_{i}")
         manual_thresholds["P1"].append(float(val))
+    
+    # SAFETY CHECK P1
+    check_ascending_order(manual_thresholds["P1"], "P1 (Temperature)")
 
+    # --- P2 & P3 ---
     for label, key, d_idx, d_val in [("Magnetization (T)", "P2", 1, 0.4), ("Coercivity (T)", "P3", 3, 0.4)]:
         st.markdown(f"**{label}**")
         sf = st.selectbox(f"Subcategories ({key})", [2, 3, 4, 5], index=d_idx, key=f"sf_{key}")
@@ -369,6 +377,10 @@ with st.sidebar:
         for i in range(sf - 1):
             v = st.number_input(f"Threshold Score {sc[i+1]} ({key})", value=float(d_val + (i * 0.2)), key=f"t_{key}_{i}")
             manual_thresholds[key].append(float(v))
+        
+        # SAFETY CHECK P2/P3
+        check_ascending_order(manual_thresholds[key], f"{key} ({label})")
+
         if key == "P2": sf_m = sf
         else: sf_c = sf
 
@@ -429,14 +441,11 @@ for i, c in enumerate(pts):
     if efficient[i]:
         efficient[i] = not np.any(np.all(pts >= c, axis=1) & np.any(pts > c, axis=1))
 
-# Applicazione Epsilon (Soft Pareto)
 if np.any(efficient) and (eps_ops > 0 or eps_ss > 0):
     pareto_vals = df.loc[efficient, ["OPS", "SS"]].values
-    # Vectorized check for speed
     def is_close_enough(row):
         return np.any((row["OPS"] >= (1 - eps_ops) * pareto_vals[:, 0]) & 
                       (row["SS"] >= (1 - eps_ss) * pareto_vals[:, 1]))
-    
     efficient_soft = df.apply(is_close_enough, axis=1)
 else:
     efficient_soft = efficient
@@ -462,15 +471,14 @@ with t1:
         st.markdown("**Top Pareto Materials**")
         show_cols = [c for c in ["Material_Name", "OPS", "SS"] if c in df.columns]
         
-        # TRUCCO PER AGGIORNAMENTO: Creiamo una chiave unica basata sui pesi
-        # Questo forza Streamlit a ridisegnare la tabella se i pesi cambiano
+        # Chiave univoca per forzare il refresh
         unique_key = f"table_{w_p1}_{w_p2}_{eps_ops}_{eps_ss}_{len(manual_thresholds['P1'])}"
         
         st.dataframe(
             df[efficient_soft].sort_values(by="OPS", ascending=False)[show_cols],
             use_container_width=True,
             height=500,
-            key=unique_key # <--- QUESTA RIGA RISOLVE IL PROBLEMA DI AGGIORNAMENTO
+            key=unique_key 
         )
         
         if "Bottleneck_prod_element" in df.columns:
