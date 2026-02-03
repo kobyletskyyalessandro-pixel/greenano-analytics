@@ -426,7 +426,9 @@ def assign_tiered_scores(df, col_name, n_tiers, thresholds):
     return assigned
 
 # --- 4. INTERFACCIA APP ---
-df = load_and_sync_data()
+# *** CORREZIONE: Usiamo .copy() per evitare modifiche all'oggetto cachato ***
+df = load_and_sync_data().copy()
+
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 
 # Definisci le metriche disponibili (inclusi i nuovi)
@@ -453,7 +455,7 @@ with st.sidebar:
     # =========================
     # 1) PERFORMANCE TIERS
     # =========================
-   
+    
     # header row (Settings + Guide button aligned right)
     st.markdown(
         """
@@ -668,16 +670,13 @@ with t1:
     colA, colB = st.columns([2, 1])
     pts = df[["OPS", "SS"]].to_numpy(dtype=float)
 
+    # 1. Calcolo Hard Pareto (efficient)
     efficient = np.ones(pts.shape[0], dtype=bool)
     for i, c in enumerate(pts):
         if efficient[i]:
             efficient[i] = not np.any(np.all(pts >= c, axis=1) & np.any(pts > c, axis=1))
 
-    df["Status"] = np.where(efficient, "Optimal Choice", "Standard")
-
-
-
-        # --- Soft Pareto: include points close to the hard Pareto front ---
+    # 2. Calcolo Soft Pareto (efficient_soft) basato su Epsilon
     pareto_front = df.loc[efficient, ["OPS", "SS"]].copy()
 
     if len(pareto_front) > 0 and (eps_ops > 0 or eps_ss > 0):
@@ -697,11 +696,6 @@ with t1:
     df["Status"] = np.where(efficient_soft, "Optimal Choice", "Standard")
 
 
-    
-
-
-    
-
     with colA:
         fig = px.scatter(
             df, x="OPS", y="SS", color="Status",
@@ -714,15 +708,18 @@ with t1:
     with colB:
         st.markdown("**Top Pareto Materials**")
         show_cols = [c for c in ["Material_Name", "OPS", "SS"] if c in df.columns]
+        
+        # *** CORREZIONE QUI: Filtriamo su 'efficient_soft' per riflettere le impostazioni epsilon ***
         st.dataframe(
-            df[efficient].sort_values(by="OPS", ascending=False)[show_cols],
+            df[efficient_soft].sort_values(by="OPS", ascending=False)[show_cols],
             use_container_width=True,
             height=500
         )
     
         # --- STEP 4: Bottleneck insight on Pareto set ---
         if "Bottleneck_prod_element" in df.columns:
-            top_df = df[efficient].copy()
+            # Anche qui usiamo efficient_soft per coerenza
+            top_df = df[efficient_soft].copy()
     
             counts = (
                 top_df["Bottleneck_prod_element"]
