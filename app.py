@@ -108,7 +108,7 @@ section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div{
 """, unsafe_allow_html=True)
 
 # ============================================================
-# PROXY SETTINGS (come il tuo script)
+# PROXY SETTINGS
 # ============================================================
 NON_MINED = {"H", "N", "O"}
 BIG = 1e30
@@ -137,7 +137,6 @@ def _weakest_link_vectorized(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.nd
     x = np.asarray(af_matrix, dtype=float)
     v = np.asarray(v_elem, dtype=float).reshape(1, -1)
     ratio = np.where(x > 0, v / np.maximum(x, 1e-30), np.inf)
-
     used = (x > 0)
     has_nan_used = np.any(used & np.isnan(v), axis=1)
     out = np.min(ratio, axis=1)
@@ -145,94 +144,51 @@ def _weakest_link_vectorized(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.nd
     return out
 
 def _bottleneck_info(af_matrix: np.ndarray, v_elem: np.ndarray, elem_symbols_by_Z: dict | None):
-    """
-    Per ogni materiale:
-    - bottleneck element = argmin_i (v_i / x_i) per x_i>0
-    - min1 = minimo
-    - min2 = secondo minimo (tra gli elementi usati)
-    - bottleneck_ratio = min2/min1 (più alto = meno fragile; ~1 = robusto, >>1 = fragilissimo)
-    Ritorna: bottleneck_symbol, min1, min2, bottleneck_ratio
-    """
     x = np.asarray(af_matrix, dtype=float)
     v = np.asarray(v_elem, dtype=float).reshape(1, -1)
-
-    # ratio: v/x per elementi usati, inf per non usati
     ratio = np.where(x > 0, v / np.maximum(x, 1e-30), np.inf)
-
-    # se un materiale usa un elemento con v=NaN -> ratio NaN -> meglio invalidare
     used = x > 0
     has_nan_used = np.any(used & np.isnan(v), axis=1)
-
-    # sostituisco NaN con inf solo per poter fare sort, ma poi invalidiamo con has_nan_used
     ratio_safe = np.where(np.isnan(ratio), np.inf, ratio)
-
-    # ordina per riga
     sorted_ratio = np.sort(ratio_safe, axis=1)
     min1 = sorted_ratio[:, 0]
-    min2 = sorted_ratio[:, 1]  # se un materiale usa 1 solo elemento, sarà inf → ok
-
-    # argmin per trovare l'elemento limitante
-    argmin = np.argmin(ratio_safe, axis=1)  # 0..117
+    min2 = sorted_ratio[:, 1] 
+    argmin = np.argmin(ratio_safe, axis=1) 
     Z_lim = (argmin + 1).astype(int)
-
     if elem_symbols_by_Z:
         bottleneck_symbol = np.array([elem_symbols_by_Z.get(int(z), f"Z{int(z)}") for z in Z_lim], dtype=object)
     else:
         bottleneck_symbol = np.array([f"Z{int(z)}" for z in Z_lim], dtype=object)
-
-    # ratio di fragilità
     bottleneck_ratio = min2 / np.maximum(min1, 1e-30)
-
-    # invalida i casi con NaN usati
     bottleneck_symbol = np.where(has_nan_used, None, bottleneck_symbol)
     min1 = np.where(has_nan_used, np.nan, min1)
     min2 = np.where(has_nan_used, np.nan, min2)
     bottleneck_ratio = np.where(has_nan_used, np.nan, bottleneck_ratio)
-
-    # se min2 è inf (materiale con 1 solo elemento), ratio sarà inf → ok, significa "non definito/mono-element"
     return bottleneck_symbol, min1, min2, bottleneck_ratio
 
-
-
 def _weighted_avg_with_nan_propagation(af_matrix: np.ndarray, v_elem: np.ndarray) -> np.ndarray:
-    """
-    Media pesata per materiale: sum_i x_i * v_i
-    Se un materiale usa un elemento con v_i = NaN -> risultato = NaN
-    (così nel plot viene colorato in grigio)
-    """
     x = np.asarray(af_matrix, dtype=float)
     v = np.asarray(v_elem, dtype=float).reshape(1, -1)
-
     used = x > 0
     has_nan_used = np.any(used & np.isnan(v), axis=1)
-
     out = x @ np.nan_to_num(v_elem, nan=0.0)
     out = np.where(has_nan_used, np.nan, out)
     return out
 
-
 def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dict | None) -> tuple[np.ndarray, np.ndarray, dict]:
     info = {"ree_missing_prod": [], "ree_missing_res": [], "note": ""}
-
     vp = v_prod.copy().astype(float)
     vr = v_res.copy().astype(float)
-
     if not elem_symbols_by_Z:
-        floor_p = np.nanmin(vp)
-        floor_r = np.nanmin(vr)
+        floor_p = np.nanmin(vp); floor_r = np.nanmin(vr)
         vp = np.where(np.isnan(vp), floor_p, vp)
         vr = np.where(np.isnan(vr), floor_r, vr)
-        info["note"] = "No element symbols found -> only floor proxy applied."
         return vp, vr, info
-
     Zs = np.arange(1, 119)
-
     nm_mask = np.array([elem_symbols_by_Z.get(int(z), "").strip() in NON_MINED for z in Zs])
     vp[nm_mask] = np.where(np.isnan(vp[nm_mask]), BIG, vp[nm_mask])
     vr[nm_mask] = np.where(np.isnan(vr[nm_mask]), BIG, vr[nm_mask])
-
     ree_mask = np.array([elem_symbols_by_Z.get(int(z), "").strip() in REE for z in Zs])
-
     known_prod = np.nansum(vp[ree_mask])
     missing_prod_idx = np.where(ree_mask & np.isnan(vp))[0]
     rem_prod = max(WORLD_REO_PROD_2024 - known_prod, 0.0)
@@ -240,7 +196,6 @@ def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dic
         fill_prod = rem_prod / len(missing_prod_idx)
         vp[missing_prod_idx] = fill_prod
         info["ree_missing_prod"] = [elem_symbols_by_Z.get(int(i+1), f"Z{i+1}") for i in missing_prod_idx]
-
     known_res = np.nansum(vr[ree_mask])
     missing_res_idx = np.where(ree_mask & np.isnan(vr))[0]
     rem_res = max(WORLD_REO_RESERVES - known_res, 0.0)
@@ -248,12 +203,9 @@ def _apply_proxies(v_prod: np.ndarray, v_res: np.ndarray, elem_symbols_by_Z: dic
         fill_res = rem_res / len(missing_res_idx)
         vr[missing_res_idx] = fill_res
         info["ree_missing_res"] = [elem_symbols_by_Z.get(int(i+1), f"Z{i+1}") for i in missing_res_idx]
-
-    floor_p = np.nanmin(vp)
-    floor_r = np.nanmin(vr)
+    floor_p = np.nanmin(vp); floor_r = np.nanmin(vr)
     vp = np.where(np.isnan(vp), floor_p, vp)
     vr = np.where(np.isnan(vr), floor_r, vr)
-
     return vp, vr, info
 
 @st.cache_data
@@ -261,38 +213,26 @@ def load_and_sync_data():
     # --- carica file ---
     df = pd.read_csv("AF_vectors.csv")
     db = pd.read_csv("Materials Database 1.csv")
-    # --- bring S1..S10 from MF_sustainability_rank.csv (material-level file) ---
     sus = pd.read_csv("MF_sustainability_rank.csv")
     
-    # normalize column names (strip spaces)
     sus.columns = [str(c).strip() for c in sus.columns]
     df.columns  = [str(c).strip() for c in df.columns]
     
-    # find S1..S10 columns robustly
     S_cols = []
     for i in range(1, 11):
         target = f"S{i}"
         if target in sus.columns:
             S_cols.append(target)
         else:
-            # fallback: first column whose name starts with "S{i}"
             hits = [c for c in sus.columns if c.upper().startswith(target)]
-            if hits:
-                S_cols.append(hits[0])
-            else:
-                raise ValueError(f"MF_sustainability_rank.csv: cannot find a column for {target}.")
+            if hits: S_cols.append(hits[0])
+            else: raise ValueError(f"MF_sustainability_rank.csv: cannot find a column for {target}.")
     
-    # choose join key (prefer Original_Index)
     join_key = None
-    if "Original_Index" in df.columns and "Original_Index" in sus.columns:
-        join_key = "Original_Index"
-    elif "Material_Name" in df.columns and "Material_Name" in sus.columns:
-        join_key = "Material_Name"
-    else:
-        raise ValueError("No common key to merge sustainability scores. Need Original_Index or Material_Name in BOTH files.")
+    if "Original_Index" in df.columns and "Original_Index" in sus.columns: join_key = "Original_Index"
+    elif "Material_Name" in df.columns and "Material_Name" in sus.columns: join_key = "Material_Name"
+    else: raise ValueError("No common key to merge sustainability scores.")
     
-    # --- MODIFICA: Mapping nuove colonne ---
-    # CSV Column Name -> App Short Label
     new_metrics_map = {
         "Compound_CO2_footprint_with_estimated_recycling_rate_CO2_per_kg": "CO2/kg rec.",
         "Compound_CO2_footprint_kg_CO2_per_kg": "CO2/kg",
@@ -300,119 +240,71 @@ def load_and_sync_data():
         "Compound_Energy_footprint_with_estimated_recycling_rate_MJ_per_kg": "MJ/kg rec.",
         "Compound_Water_usage_l_per_kg": "L/kg"
     }
-
     cols_to_merge = [join_key] + S_cols
-    
-    # Aggiungi solo le colonne che esistono effettivamente nel CSV
     valid_new_cols = []
     for csv_col in new_metrics_map.keys():
-        if csv_col in sus.columns:
-            valid_new_cols.append(csv_col)
-    
+        if csv_col in sus.columns: valid_new_cols.append(csv_col)
     cols_to_merge += valid_new_cols
     
     sus_small = sus[cols_to_merge].copy()
-    
-    # merge
     df = df.merge(sus_small, on=join_key, how="left")
     
-    # rename S columns
     rename_map = {S_cols[i-1]: f"S{i}" for i in range(1, 11)}
-    
-    # rename New Metrics columns (dal nome lungo al nome corto)
-    for csv_col in valid_new_cols:
-        rename_map[csv_col] = new_metrics_map[csv_col]
-
+    for csv_col in valid_new_cols: rename_map[csv_col] = new_metrics_map[csv_col]
     df = df.rename(columns=rename_map)
 
-    # --- pulizia DB elementare ---
-    if "Z" not in db.columns:
-        raise ValueError("Nel database elementi manca la colonna 'Z' (1..118).")
-
+    if "Z" not in db.columns: raise ValueError("Nel database elementi manca la colonna 'Z'.")
     db = db.dropna(subset=["Z"]).copy()
-    db["Z"] = pd.to_numeric(db["Z"], errors="coerce")
-    db = db.dropna(subset=["Z"]).copy()
-    db["Z"] = db["Z"].astype(int)
+    db["Z"] = pd.to_numeric(db["Z"], errors="coerce").astype(int)
 
-    # --- estrazione simboli elementi (per proxy NON_MINED/REE) ---
     elem_col = None
     for c in db.columns:
-        if "element" in str(c).lower():   # prende "Elements " o simili
-            elem_col = c
-            break
-
+        if "element" in str(c).lower():
+            elem_col = c; break
     elem_symbols_by_Z = None
     if elem_col is not None:
         tmp = db[["Z", elem_col]].dropna()
         elem_symbols_by_Z = {int(z): str(sym).strip() for z, sym in zip(tmp["Z"], tmp[elem_col])}
 
-    # --- vettori proprietà: production + reserve (NaN se manca) ---
     v_prod_raw = _build_prop_vector(db, "production")
     v_res_raw  = _build_prop_vector(db, "reserve")
-
-    # --- proxy fill (come tuo script) ---
     v_prod, v_res, proxy_info = _apply_proxies(v_prod_raw, v_res_raw, elem_symbols_by_Z)
 
-    # --- build AF matrix (Materials x 118 elements) ---
     af_cols = [f"AF_{i}" for i in range(1, 119)]
-    missing_af = [c for c in af_cols if c not in df.columns]
-    if missing_af:
-        raise ValueError(f"Mancano colonne AF nel file AF_vectors.csv (esempi): {missing_af[:5]}")
-
     af_matrix = df[af_cols].fillna(0.0).to_numpy(dtype=float)
 
-    # --- weakest-link metrics (Pmax, Plong) ---
     df["Pmax_t_per_yr"] = _weakest_link_vectorized(af_matrix, v_prod)
     df["Plong_t"]       = _weakest_link_vectorized(af_matrix, v_res)
 
-
-    # --- bottleneck diagnostics (production) ---
     bn_el_P, bn_min1_P, bn_min2_P, bn_ratio_P = _bottleneck_info(af_matrix, v_prod, elem_symbols_by_Z)
     df["Bottleneck_prod_element"] = bn_el_P
     df["Bottleneck_prod_min1"] = bn_min1_P
     df["Bottleneck_prod_min2"] = bn_min2_P
     df["Bottleneck_prod_ratio"] = bn_ratio_P
     
-    # --- bottleneck diagnostics (reserves / long-term) ---
     bn_el_R, bn_min1_R, bn_min2_R, bn_ratio_R = _bottleneck_info(af_matrix, v_res, elem_symbols_by_Z)
     df["Bottleneck_res_element"] = bn_el_R
     df["Bottleneck_res_min1"] = bn_min1_R
     df["Bottleneck_res_min2"] = bn_min2_R
     df["Bottleneck_res_ratio"] = bn_ratio_R
     
-    # --- opzionale: metriche da DB (se esistono) ---
     try:
-        v_hhi   = _build_prop_vector(db, "HHI")
-        v_esg   = _build_prop_vector(db, "ESG")
-        v_sr    = _build_prop_vector(db, "Supply risk")
-        v_comp  = _build_prop_vector(db, "Companionality (%)")
-
+        v_hhi = _build_prop_vector(db, "HHI"); v_esg = _build_prop_vector(db, "ESG")
+        v_sr = _build_prop_vector(db, "Supply risk"); v_comp = _build_prop_vector(db, "Companionality (%)")
         df["HHI"] = _weighted_avg_with_nan_propagation(af_matrix, v_hhi)
         df["ESG"] = _weighted_avg_with_nan_propagation(af_matrix, v_esg)
         df["Supply risk"] = _weighted_avg_with_nan_propagation(af_matrix, v_sr)
         df["Companionality (%)"] = _weighted_avg_with_nan_propagation(af_matrix, v_comp)
-    except Exception:
-        pass
+    except Exception: pass
 
-    # --- Converti in numerico le nuove metriche (se esistono dopo il merge) ---
     for label in new_metrics_map.values():
-        if label in df.columns:
-            df[label] = pd.to_numeric(df[label], errors="coerce")
-    
-    # ----------------------------------------
-
-    # --- cleanup numerico ---
+        if label in df.columns: df[label] = pd.to_numeric(df[label], errors="coerce")
     for c in ["P1", "P2", "P3"]:
-        if c in df.columns:
-            df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
+        if c in df.columns: df[c] = pd.to_numeric(df[c], errors="coerce").fillna(0)
 
-    # debug attrs
     df.attrs["proxy_info"] = proxy_info
     df.attrs["has_elem_symbols"] = bool(elem_symbols_by_Z)
-
     return df
-        
-    
 
 # --- 3. MOTORE DI CALCOLO RANKING ---
 def generate_linear_scores(n_tiers):
@@ -421,281 +313,142 @@ def generate_linear_scores(n_tiers):
 def assign_tiered_scores(df, col_name, n_tiers, thresholds):
     scores = generate_linear_scores(n_tiers)
     assigned = pd.Series(scores[0], index=df.index, dtype=float)
+    # IMPORTANTE: Se thresholds è vuoto (es. prima del render), non crasha
+    if not thresholds: return assigned
+    
     for i in range(len(thresholds)):
         assigned[df[col_name] >= thresholds[i]] = scores[i+1]
     return assigned
 
 # --- 4. INTERFACCIA APP ---
-# *** CORREZIONE: Usiamo .copy() per evitare modifiche all'oggetto cachato ***
+# SOLUZIONE: Usare .copy() per assicurare che df sia "pulito" ad ogni rerun
 df = load_and_sync_data().copy()
 
 manual_thresholds = {"P1": [], "P2": [], "P3": []}
 
-# Definisci le metriche disponibili (inclusi i nuovi)
 all_metrics_options = ["SS", "HHI", "ESG", "Supply risk", "Companionality (%)", 
                        "CO2/kg", "CO2/kg rec.", "MJ/kg", "MJ/kg rec.", "L/kg"]
 
-# Dizionario descrizioni (ENGLISH)
 metric_descriptions = {
-    "SS": "Sustainability Score (calculated based on your weights for S1-S10).",
-    "HHI": "Herfindahl-Hirschman Index: A measure of market concentration.",
+    "SS": "Sustainability Score.",
+    "HHI": "Herfindahl-Hirschman Index.",
     "ESG": "Environmental, Social, and Governance score.",
-    "Supply risk": "Risk associated with the supply chain stability.",
-    "Companionality (%)": "Percentage of the element produced as a byproduct.",
-    "CO2/kg": "CO2 produced per kg of compound (Carbon Footprint).",
-    "CO2/kg rec.": "CO2 produced per kg of compound, estimating recycling rate.",
-    "MJ/kg": "Energy footprint per kg of compound (Energy Consumption).",
-    "MJ/kg rec.": "Energy footprint per kg of compound, estimating recycling rate.",
-    "L/kg": "Water usage (in liters) per kg of compound (Water Footprint)."
+    "Supply risk": "Risk associated with supply chain.",
+    "Companionality (%)": "% produced as byproduct.",
+    "CO2/kg": "Carbon Footprint.",
+    "CO2/kg rec.": "Carbon Footprint (with recycling).",
+    "MJ/kg": "Energy Consumption.",
+    "MJ/kg rec.": "Energy Consumption (with recycling).",
+    "L/kg": "Water Footprint."
 }
 
 with st.sidebar:
-    
+    st.markdown("""<div class="sidebar-header"><div class="sidebar-title">Settings</div></div>""", unsafe_allow_html=True)
 
-    # =========================
-    # 1) PERFORMANCE TIERS
-    # =========================
-    
-    # header row (Settings + Guide button aligned right)
-    st.markdown(
-        """
-        <div class="sidebar-header">
-          <div class="sidebar-title">Settings</div>
-          <div class="sidebar-guide">
-        """,
-        unsafe_allow_html=True
-    )
+    # Bottone di emergenza per pulire la cache se cambi i file CSV
+    if st.button("♻️ Clear Cache & Reload"):
+        st.cache_data.clear()
+        st.rerun()
 
     GUIDE_PATH = "GreenNanoAnalyticsGuide.pdf"
     if os.path.exists(GUIDE_PATH):
         with open(GUIDE_PATH, "rb") as f:
-            st.download_button(
-                label="📘",
-                data=f,
-                file_name="GreenNanoAnalyticsGuide.pdf",
-                mime="application/pdf",
-                help="Download User Guide",
-                key="download_guide_top",
-            )
-    else:
-        st.write("")
+            st.download_button("📘", f, "GreenNanoAnalyticsGuide.pdf", "application/pdf")
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
-
-    # ...poi continua con le tue sezioni: Performance tiers, ecc.
-
-    # P1 Temperature
+    # --- INPUT THRESHOLDS ---
     sf_t = st.selectbox("Subcategories (P1)", [2, 3, 4, 5], index=2, key="sf_P1")
     sc_t = generate_linear_scores(sf_t)
     for i in range(sf_t - 1):
-        val = st.number_input(
-            f"Threshold for Score {sc_t[i+1]} (P1)",
-            value=int(350 + (i * 50)),
-            min_value=350,
-            step=1,
-            format="%d",
-            key=f"p1_{i}"
-        )
+        val = st.number_input(f"Threshold Score {sc_t[i+1]} (P1)", value=int(350 + (i * 50)), step=1, key=f"p1_{i}")
         manual_thresholds["P1"].append(float(val))
 
-    # P2 Magnetization / P3 Coercivity
-    for label, key, d_idx, d_val in [
-        ("Magnetization (T)", "P2", 1, 0.4),
-        ("Coercivity (T)", "P3", 3, 0.4),
-    ]:
+    for label, key, d_idx, d_val in [("Magnetization (T)", "P2", 1, 0.4), ("Coercivity (T)", "P3", 3, 0.4)]:
         st.markdown(f"**{label}**")
         sf = st.selectbox(f"Subcategories ({key})", [2, 3, 4, 5], index=d_idx, key=f"sf_{key}")
         sc = generate_linear_scores(sf)
         for i in range(sf - 1):
-            v = st.number_input(
-                f"Threshold for Score {sc[i+1]} ({key})",
-                value=float(d_val + (i * 0.2)),
-                min_value=float(d_val),
-                key=f"t_{key}_{i}"
-            )
+            v = st.number_input(f"Threshold Score {sc[i+1]} ({key})", value=float(d_val + (i * 0.2)), key=f"t_{key}_{i}")
             manual_thresholds[key].append(float(v))
+        if key == "P2": sf_m = sf
+        else: sf_c = sf
 
-        if key == "P2":
-            sf_m = sf
-        else:
-            sf_c = sf
-
-    # =========================
-    # 2) PERFORMANCE WEIGHTS
-    # =========================
+    # --- WEIGHTS ---
     st.markdown('<div class="blue-section-header"><p>2. Performance Weights</p></div>', unsafe_allow_html=True)
-
     w_p1 = st.slider("Weight P1 (Temp)", 0.0, 1.0, 0.33, key="w_p1")
     rem = float(round(1.0 - w_p1, 2))
     w_p2 = st.slider("Weight P2 (Mag)", 0.0, rem, min(0.33, rem), key="w_p2")
     w_p3 = float(round(max(0.0, 1.0 - (w_p1 + w_p2)), 2))
+    st.info(f"Weight P3: {w_p3:.2f}")
 
-    st.markdown(
-        f"""
-        <div class="custom-summary-box" style="padding:10px 12px; margin-top:10px;">
-            <p style="margin:0; font-size:14px;"><b>Weight P3 (Coercivity)</b>: {w_p3:.2f}</p>
-            <p style="margin:0; font-size:12px; opacity:0.8;">(auto = 1 − P1 − P2)</p>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
+    # --- PARETO SETTINGS ---
+    st.markdown('<div class="blue-section-header"><p>Pareto settings (ε)</p></div>', unsafe_allow_html=True)
+    eps_ops = st.slider("ε on OPS", 0.0, 0.60, 0.20, 0.02)
+    eps_ss = st.slider("ε on SS", 0.0, 0.40, 0.05, 0.01)
 
-    # =========================
-    # MOVED: PARETO SETTINGS
-    # =========================
-    st.markdown('<div class="blue-section-header"><p>Pareto settings(/epsilon)</p></div>', unsafe_allow_html=True)
-
-    eps_ops = st.slider(
-        "ε on OPS (tolerance)",
-        0.0, 0.60, 0.20, 0.02,
-        help="0 = hard Pareto. 0.05 means 'allow 5% worse OPS' and still keep near-front points."
-    )
-
-    eps_ss = st.slider(
-        "ε on SS (tolerance)",
-        0.0, 0.40, 0.05, 0.01,
-        help="0 = hard Pareto. 0.05 means 'allow 5% worse SS' and still keep near-front points."
-    )
-
-    # =========================
-    # 3) SCALABILITY VIEW
-    # =========================
+    # --- SCALABILITY ---
     st.markdown('<div class="blue-section-header"><p>3. Scalability View</p></div>', unsafe_allow_html=True)
-
-    # UPDATED: Added new metrics to the list and description box
-    color_metric = st.selectbox(
-        "Coloring Metric",
-        all_metrics_options,
-        index=0,
-        key="color_metric"
-    )
+    color_metric = st.selectbox("Coloring Metric", all_metrics_options, index=0)
     
-    # Show description of selected metric
-    curr_desc = metric_descriptions.get(color_metric, "")
-    if curr_desc:
-        st.info(f"ℹ️ **Meaning**: {curr_desc}")
-
-    # =========================
-    # 3B) SUSTAINABILITY WEIGHTS
-    # =========================
+    # --- SS WEIGHTS ---
     st.markdown('<div class="blue-section-header"><p>3B. Sustainability Weights</p></div>', unsafe_allow_html=True)
-    st.caption("SS = Π S_i^(x_i) with Σx_i = 1. The app stops if Σx_i ≠ 1.")
-
     default_w = [0.1] * 10
     w_in = []
     for i in range(1, 11):
-        w_in.append(
-            st.number_input(
-                f"Weight x{i} for S{i}",
-                min_value=0.0,
-                max_value=1.0,
-                value=default_w[i-1],
-                step=0.01,
-                key=f"w_s{i}"
-            )
-        )
-
-
+        w_in.append(st.number_input(f"Weight S{i}", 0.0, 1.0, default_w[i-1], 0.01, key=f"w_s{i}"))
     w_sum = float(np.sum(w_in))
-    
-    if w_sum <= 0:
-        st.error("❌ Tutti i pesi S sono zero. Devi impostare pesi con somma = 1.")
-        st.stop()
-    
     if abs(w_sum - 1.0) > 1e-6:
-        st.error(f"❌ Somma pesi S = {w_sum:.3f}. Deve essere ESATTAMENTE 1.")
+        st.error(f"❌ Sum must be 1. Current: {w_sum:.2f}")
         st.stop()
-    
-    # ✅ se arrivi qui, la somma è 1
     w_ss = np.array(w_in, dtype=float)
-    st.success("✅ OK: Σxᵢ = 1")
 
-    # =========================
-    # 4) TOP-RIGHT TREND
-    # =========================
+    # --- TREND ---
     st.markdown('<div class="blue-section-header"><p>4. Top-right Trend</p></div>', unsafe_allow_html=True)
+    trend_metrics = st.multiselect("Metrics vs H", all_metrics_options, default=all_metrics_options)
 
-    # UPDATED: Added new metrics
-    trend_metrics = st.multiselect(
-        "Metrics to test vs H = log(Pmax)+log(Plong)",
-        all_metrics_options,
-        default=all_metrics_options,
-        key="trend_metrics"
-    )
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# --- Compute SS from S1..S10 using user weights w_ss ---
+# --- CALCOLO SCORE (Fuori da sidebar) ---
 S_cols = [f"S{i}" for i in range(1, 11)]
-missing_S = [c for c in S_cols if c not in df.columns]
-if missing_S:
-    st.error(f"Missing sustainability columns in data: {missing_S}. SS cannot be computed.")
+if any(c not in df.columns for c in S_cols):
+    st.error("Missing Sustainability columns.")
     st.stop()
 
 S = df[S_cols].apply(pd.to_numeric, errors="coerce").to_numpy(dtype=float)
-
-# tua scelta: NaN -> 0.3
 S = np.where(np.isnan(S), 0.3, S)
 S = np.clip(S, 1e-12, 1.0)
-
 df["SS"] = np.exp((np.log(S) * w_ss.reshape(1, -1)).sum(axis=1))
 
-
-
-# --- CALCOLI ---
 p1_s = assign_tiered_scores(df, "P1", sf_t, manual_thresholds["P1"]) if "P1" in df.columns else 1.0
 p2_s = assign_tiered_scores(df, "P2", sf_m, manual_thresholds["P2"]) if "P2" in df.columns else 1.0
 p3_s = assign_tiered_scores(df, "P3", sf_c, manual_thresholds["P3"]) if "P3" in df.columns else 1.0
 
 df["OPS"] = np.power(p1_s, w_p1) * np.power(p2_s, w_p2) * np.power(p3_s, w_p3)
 
-t1, t2, t3 = st.tabs([
-    "🏆 Pareto Ranking",
-    "🏭 Scalability Map",
-    "📈 Top-right Trend"
-])
+# --- PARETO CALCULATION ---
+pts = df[["OPS", "SS"]].to_numpy(dtype=float)
+efficient = np.ones(pts.shape[0], dtype=bool)
+for i, c in enumerate(pts):
+    if efficient[i]:
+        efficient[i] = not np.any(np.all(pts >= c, axis=1) & np.any(pts > c, axis=1))
+
+# Applicazione Epsilon (Soft Pareto)
+if np.any(efficient) and (eps_ops > 0 or eps_ss > 0):
+    pareto_vals = df.loc[efficient, ["OPS", "SS"]].values
+    # Vectorized check for speed
+    def is_close_enough(row):
+        return np.any((row["OPS"] >= (1 - eps_ops) * pareto_vals[:, 0]) & 
+                      (row["SS"] >= (1 - eps_ss) * pareto_vals[:, 1]))
+    
+    efficient_soft = df.apply(is_close_enough, axis=1)
+else:
+    efficient_soft = efficient
+
+df["Status"] = np.where(efficient_soft, "Optimal Choice", "Standard")
+
+# --- TABS E VISUALIZZAZIONE ---
+t1, t2, t3 = st.tabs(["🏆 Pareto Ranking", "🏭 Scalability Map", "📈 Top-right Trend"])
 
 with t1:
     colA, colB = st.columns([2, 1])
-    pts = df[["OPS", "SS"]].to_numpy(dtype=float)
-
-    # 1. Calcolo Hard Pareto (efficient)
-    efficient = np.ones(pts.shape[0], dtype=bool)
-    for i, c in enumerate(pts):
-        if efficient[i]:
-            efficient[i] = not np.any(np.all(pts >= c, axis=1) & np.any(pts > c, axis=1))
-
-    # 2. Calcolo Soft Pareto (efficient_soft) basato su Epsilon
-    pareto_front = df.loc[efficient, ["OPS", "SS"]].copy()
-
-    if len(pareto_front) > 0 and (eps_ops > 0 or eps_ss > 0):
-        soft = np.zeros(len(df), dtype=bool)
-
-        # For each point on the hard front, accept points not much worse (within eps)
-        for _, p in pareto_front.iterrows():
-            soft |= (
-                (df["OPS"] >= (1 - eps_ops) * float(p["OPS"])) &
-                (df["SS"]  >= (1 - eps_ss)  * float(p["SS"]))
-            )
-
-        efficient_soft = soft
-    else:
-        efficient_soft = efficient
-
-    df["Status"] = np.where(efficient_soft, "Optimal Choice", "Standard")
-
-
+    
     with colA:
         fig = px.scatter(
             df, x="OPS", y="SS", color="Status",
@@ -709,248 +462,81 @@ with t1:
         st.markdown("**Top Pareto Materials**")
         show_cols = [c for c in ["Material_Name", "OPS", "SS"] if c in df.columns]
         
-        # *** CORREZIONE QUI: Filtriamo su 'efficient_soft' per riflettere le impostazioni epsilon ***
+        # TRUCCO PER AGGIORNAMENTO: Creiamo una chiave unica basata sui pesi
+        # Questo forza Streamlit a ridisegnare la tabella se i pesi cambiano
+        unique_key = f"table_{w_p1}_{w_p2}_{eps_ops}_{eps_ss}_{len(manual_thresholds['P1'])}"
+        
         st.dataframe(
             df[efficient_soft].sort_values(by="OPS", ascending=False)[show_cols],
             use_container_width=True,
-            height=500
+            height=500,
+            key=unique_key # <--- QUESTA RIGA RISOLVE IL PROBLEMA DI AGGIORNAMENTO
         )
-    
-        # --- STEP 4: Bottleneck insight on Pareto set ---
+        
         if "Bottleneck_prod_element" in df.columns:
-            # Anche qui usiamo efficient_soft per coerenza
-            top_df = df[efficient_soft].copy()
-    
-            counts = (
-                top_df["Bottleneck_prod_element"]
-                .value_counts()
-                .head(5)
-            )
-    
+            counts = df.loc[efficient_soft, "Bottleneck_prod_element"].value_counts().head(5)
             if len(counts) > 0:
                 st.markdown("**Most frequent production bottlenecks (Pareto set)**")
                 for el, n in counts.items():
                     st.write(f"• **{el}** → {n} materials")
 
-
-
-
-
-
-
-
-
 with t2:
     st.markdown("### Scalability (Weakest-link)")
-    st.caption("y = Pmax = min(P_i / x_i),  x = Plong = min(R_i / x_i).  (x_i = AF_i)")
-
     df_plot = df.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
-
-
-
-
-    # flag fragilità: ratio alto => un elemento domina nettamente
-    # soglia: top 10% dei ratio (robusto e automatico, non hard-coded)
-    if "Bottleneck_prod_ratio" in df_plot.columns:
-        thr = np.nanpercentile(df_plot["Bottleneck_prod_ratio"].to_numpy(dtype=float), 90)
-        df_plot["Bottleneck_fragile"] = df_plot["Bottleneck_prod_ratio"] >= thr
-    else:
-        df_plot["Bottleneck_fragile"] = False
-
-
-
-
-
-
-
-
-
-
     
-    # UPDATED: Use the variable logic for labels, fallback includes new metrics
     metric_col = color_metric
-    if metric_col not in df_plot.columns:
-        st.warning(f"Colonna '{metric_col}' non trovata nel CSV. Uso 'SS' come fallback.")
-        metric_col = "SS"
-
-    if metric_col not in df_plot.columns:
-        df_plot[metric_col] = np.nan
-
-    short_label = "Comp. (%)" if metric_col == "Companionality (%)" else metric_col
-
-    df_nonan = df_plot[df_plot[metric_col].notna()].copy()
-    df_nan   = df_plot[df_plot[metric_col].isna()].copy()
-
-    for d in (df_nonan, df_nan):
-        d["Pmax_t_per_yr"] = pd.to_numeric(d["Pmax_t_per_yr"], errors="coerce").replace([np.inf, -np.inf], np.nan).clip(lower=1e-12)
-        d["Plong_t"]       = pd.to_numeric(d["Plong_t"], errors="coerce").replace([np.inf, -np.inf], np.nan).clip(lower=1e-12)
-
+    if metric_col not in df_plot.columns: metric_col = "SS"
+    
+    df_nonan = df_plot[df_plot[metric_col].notna()]
+    df_nan = df_plot[df_plot[metric_col].isna()]
+    
     fig_sc = go.Figure()
-
-    # --- NON-NaN: colorati + colorbar
-    if len(df_nonan) > 0:
+    if not df_nonan.empty:
         fig_sc.add_trace(go.Scatter(
-            x=df_nonan["Plong_t"].astype(float),
-            y=df_nonan["Pmax_t_per_yr"].astype(float),
-            mode="markers",
-            name=short_label,
+            x=df_nonan["Plong_t"], y=df_nonan["Pmax_t_per_yr"], mode="markers",
             marker=dict(
-                size=np.where(df_nonan.get("Status", "Standard") == "Optimal Choice", 10, 7),
-                color=pd.to_numeric(df_nonan[metric_col], errors="coerce"),
-                colorscale="Viridis",
-                showscale=True,
-                colorbar=dict(title=short_label + " (grey = NaN)"),
-                opacity=0.9,
+                size=np.where(df_nonan["Status"] == "Optimal Choice", 10, 7),
+                color=df_nonan[metric_col], colorscale="Viridis", showscale=True,
+                colorbar=dict(title=metric_col), opacity=0.9
             ),
-            text=df_nonan["Material_Name"].astype(str) if "Material_Name" in df_nonan.columns else None,
-            hovertemplate=(
-                "%{text}<br>"
-                "Plong=%{x:.3g}<br>"
-                "Pmax=%{y:.3g}<br>"
-                + metric_col + "=%{marker.color:.3g}<extra></extra>"
-            ),
+            text=df_nonan["Material_Name"],
+            hovertemplate="%{text}<br>Plong=%{x:.3g}<br>Pmax=%{y:.3g}<br>Val=%{marker.color:.3g}"
         ))
-
-    # --- NaN: grigi (no colorbar)
-    if len(df_nan) > 0:
+    if not df_nan.empty:
         fig_sc.add_trace(go.Scatter(
-            x=df_nan["Plong_t"].astype(float),
-            y=df_nan["Pmax_t_per_yr"].astype(float),
-            mode="markers",
-            name=short_label + " (NaN)",
-            marker=dict(
-                size=np.where(df_nan.get("Status", "Standard") == "Optimal Choice", 10, 7),
-                color="lightgrey",
-                opacity=0.9,
-            ),
-            text=df_nan["Material_Name"].astype(str) if "Material_Name" in df_nan.columns else None,
-            hovertemplate=(
-                "%{text}<br>"
-                "Plong=%{x:.3g}<br>"
-                "Pmax=%{y:.3g}<br>"
-                + metric_col + "=NaN<extra></extra>"
-            ),
+            x=df_nan["Plong_t"], y=df_nan["Pmax_t_per_yr"], mode="markers",
+            marker=dict(size=7, color="lightgrey", opacity=0.9),
+            text=df_nan["Material_Name"], hovertemplate="%{text}<br>Val=NaN"
         ))
-
-    fig_sc.update_layout(
-    template="plotly_white",
-    height=650,
-    xaxis=dict(type="log", title="Long-term production (tons)  [min(R_i/x_i)]"),
-    yaxis=dict(type="log", title="Max yearly production (t/yr) [min(P_i/x_i)]"),
-    legend_title_text="Legend",
-    legend=dict(orientation="h", y=-0.25, x=0.0),
-)
-
-    st.caption(f"Number of materials plotted: {len(df_plot)}")
+    
+    fig_sc.update_layout(template="plotly_white", height=600, xaxis_type="log", yaxis_type="log",
+                         xaxis_title="Long-term prod (tons)", yaxis_title="Max yearly prod (t/yr)")
     st.plotly_chart(fig_sc, use_container_width=True)
-
 
 with t3:
     st.markdown("### Does a metric increase when moving top-right?")
-    st.caption("We test each metric Y against H = log(Pmax) + log(Plong). NaN points are ignored.")
-
-    # --- DISCLAIMER ROSSO (RICHIESTA UTENTE) ---
-    st.markdown("""
-    <div style='color: #b91c1c; background-color: #fef2f2; padding: 10px; border-radius: 5px; border: 1px solid #fca5a5; margin-bottom: 15px;'>
-    <b>Note regarding data visualization:</b> Flat trend lines or clustered points often indicate <b>missing data</b> for specific metrics, a lack of variance in the underlying data, or that the values are extremely close to one another. Please use the interactive zoom tools on the charts to inspect dense clusters. (Future updates will allow for the inclusion of additional data).
-    </div>
-    """, unsafe_allow_html=True)
-    # -------------------------------------------
-
-    base = df.copy()
-
-    base = base.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
-    base = base[(base["Pmax_t_per_yr"] > 0) & (base["Plong_t"] > 0)].copy()
-
-    if len(base) == 0:
-        st.warning("No valid points with Pmax>0 and Plong>0.")
-        st.stop()
-
-    H = np.log(base["Pmax_t_per_yr"].to_numpy(dtype=float)) + np.log(base["Plong_t"].to_numpy(dtype=float))
-    base["_H_"] = H
-
-    label_map = {
-        "Companionality (%)": "Comp. (%)",
-        "Supply risk": "Supply risk",
-        "HHI": "HHI",
-        "ESG": "ESG",
-        "SS": "SS",
-        # New metrics don't strict mapping since we renamed columns directly, but explicit is fine
-        "CO2/kg": "CO2/kg",
-        "CO2/kg rec.": "CO2/kg rec.",
-        "MJ/kg": "MJ/kg",
-        "MJ/kg rec.": "MJ/kg rec.",
-        "L/kg": "L/kg",
-    }
-
-    cols = st.columns(2)
-    col_idx = 0
-
-    for metric in trend_metrics:
-        if metric not in base.columns:
-            st.info(f"Metric '{metric}' not found in dataframe → skipped.")
-            continue
-
-        tmp = base[["_H_", metric]].copy()
-        tmp[metric] = pd.to_numeric(tmp[metric], errors="coerce")
-        tmp = tmp.dropna(subset=[metric, "_H_"]).copy()
-
-        if len(tmp) < 3:
-            st.info(f"Not enough valid points for '{metric}' (n={len(tmp)}).")
-            continue
-
-        x = tmp["_H_"].to_numpy(dtype=float)
-        y = tmp[metric].to_numpy(dtype=float)
-
-        m, q = np.polyfit(x, y, 1)
-        y_hat = m * x + q
-
-        ss_res = np.sum((y - y_hat) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2) + 1e-30
-        r2 = 1 - ss_res / ss_tot
-
-        r = np.corrcoef(x, y)[0, 1]
-        rho = pd.Series(x).rank().corr(pd.Series(y).rank(), method="pearson")
-
-        dof = max(len(y) - 2, 1)
-        sigma = np.std(y - y_hat) + 1e-12
-        chi2 = np.sum(((y - y_hat) / sigma) ** 2)
-        chi2_red = chi2 / dof
-
-        short = label_map.get(metric, metric)
-
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=x,
-            y=y,
-            mode="markers",
-            name=short,
-            marker=dict(size=8, opacity=0.85),
-        ))
-
-        xs = np.linspace(np.min(x), np.max(x), 200)
-        fig.add_trace(go.Scatter(
-            x=xs,
-            y=m * xs + q,
-            mode="lines",
-            name="Trend",
-        ))
-
-        fig.update_layout(
-            template="plotly_white",
-            height=420,
-            title=f"{short} vs H  (n={len(y)}, slope={m:.3g}, R²={r2:.3g})",
-            xaxis_title="H = log(Pmax) + log(Plong)",
-            yaxis_title=short,
-            legend=dict(orientation="h", y=-0.25, x=0.0),
-            margin=dict(l=40, r=20, t=60, b=60),
-        )
-
-        with cols[col_idx]:
-            st.plotly_chart(fig, use_container_width=True)
-            st.write(
-                f"**Stats** — n={len(y)} | slope={m:.4g} | intercept={q:.4g} | "
-                f"R²={r2:.3f} | Pearson r={r:.3f} | Spearman ρ={rho:.3f} | χ²_red(proxy)={chi2_red:.2f}"
-            )
-
-        col_idx = 1 - col_idx
+    base = df.dropna(subset=["Pmax_t_per_yr", "Plong_t"]).copy()
+    base = base[(base["Pmax_t_per_yr"] > 0) & (base["Plong_t"] > 0)]
+    
+    if not base.empty:
+        base["_H_"] = np.log(base["Pmax_t_per_yr"]) + np.log(base["Plong_t"])
+        cols = st.columns(2)
+        idx = 0
+        for metric in trend_metrics:
+            if metric not in base.columns: continue
+            tmp = base.dropna(subset=[metric])
+            if len(tmp) < 3: continue
+            
+            x = tmp["_H_"]; y = tmp[metric]
+            m, q = np.polyfit(x, y, 1)
+            r2 = np.corrcoef(x, y)[0,1]**2
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name=metric))
+            fig.add_trace(go.Scatter(x=x, y=m*x+q, mode="lines", name="Trend"))
+            fig.update_layout(template="plotly_white", height=350, title=f"{metric} (R²={r2:.3f})",
+                              xaxis_title="H = log(Pmax)+log(Plong)", yaxis_title=metric)
+            
+            with cols[idx % 2]:
+                st.plotly_chart(fig, use_container_width=True)
+            idx += 1
