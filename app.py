@@ -550,9 +550,25 @@ with t3:
             tmp = base.dropna(subset=[metric])
             if len(tmp) < 3: continue
             
-            x = tmp["_H_"]; y = tmp[metric]
+            x = tmp["_H_"].to_numpy(dtype=float)
+            y = tmp[metric].to_numpy(dtype=float)
+            
+            # --- CALCOLI STATISTICI RIPRISTINATI ---
             m, q = np.polyfit(x, y, 1)
-            r2 = np.corrcoef(x, y)[0,1]**2
+            y_hat = m * x + q
+
+            ss_res = np.sum((y - y_hat) ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2) + 1e-30
+            r2 = 1 - ss_res / ss_tot
+
+            r = np.corrcoef(x, y)[0, 1]
+            rho = pd.Series(x).rank().corr(pd.Series(y).rank(), method="pearson")
+
+            dof = max(len(y) - 2, 1)
+            sigma = np.std(y - y_hat) + 1e-12
+            chi2 = np.sum(((y - y_hat) / sigma) ** 2)
+            chi2_red = chi2 / dof
+            # ----------------------------------------
             
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=x, y=y, mode="markers", name=metric))
@@ -562,4 +578,9 @@ with t3:
             
             with cols[idx % 2]:
                 st.plotly_chart(fig, use_container_width=True)
+                # SCRITTA STATISTICHE RIPRISTINATA
+                st.write(
+                    f"**Stats** — n={len(y)} | slope={m:.4g} | intercept={q:.4g} | "
+                    f"R²={r2:.3f} | Pearson r={r:.3f} | Spearman ρ={rho:.3f} | χ²_red(proxy)={chi2_red:.2f}"
+                )
             idx += 1
