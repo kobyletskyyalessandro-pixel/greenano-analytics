@@ -553,7 +553,7 @@ with t3:
             x = tmp["_H_"].to_numpy(dtype=float)
             y = tmp[metric].to_numpy(dtype=float)
             
-            # --- CALCOLI STATISTICI RIPRISTINATI ---
+            # --- CALCOLI STATISTICI ---
             m, q = np.polyfit(x, y, 1)
             y_hat = m * x + q
 
@@ -578,9 +578,27 @@ with t3:
             
             with cols[idx % 2]:
                 st.plotly_chart(fig, use_container_width=True)
-                # SCRITTA STATISTICHE (RIMOSSA SOLO INTERCETTA)
+                # SCRITTA STATISTICHE (RIMOSSA INTERCETTA)
                 st.write(
                     f"**Stats** — n={len(y)} | slope={m:.4g} | "
                     f"R²={r2:.3f} | Pearson r={r:.3f} | Spearman ρ={rho:.3f} | χ²_red(proxy)={chi2_red:.2f}"
                 )
             idx += 1
+
+    # --- LEGENDINA AGGIUNTA QUI (IN ENGLISH) ---
+    st.divider()
+    st.markdown("#### 💡 Statistics Guide:")
+    st.info("""
+    * **Slope ($m$):** Indicates the steepness of the regression line. If positive, the metric tends to increase as you move towards the top-right of the scalability map.
+    * **$R^2$ (0 to 1):** Coefficient of determination. Indicates how well the red trend line fits the data points. Values close to 1 indicate a strong fit; values close to 0 indicate no linear relationship.
+    * **Pearson $r$ (-1 to +1):** Measures linear correlation.
+        * $+1$: Perfect positive correlation.
+        * $-1$: Perfect negative correlation.
+        * $0$: No linear correlation.
+    * **Spearman $\\rho$ (-1 to +1):** Rank correlation. Assesses monotonic relationships (not necessarily linear).
+        * **If negative:** Indicates an inverse relationship (e.g., as scalability increases, the metric decreases).
+    * **$\chi^2_{red}$ (Reduced Chi-squared):** Measures goodness of fit relative to variance.
+        * $\\approx 1$: Ideal fit.
+        * $\\gg 1$: Poor fit or high data variance (underfitting).
+        * $\\ll 1$: Possible overfitting.
+    """)
